@@ -93,17 +93,17 @@ conf_command_t conf_unbound = {
    .name  = "unbound",
    .desc  =
       "What to do on unbound keys\n\n"
-      "_TYPES_\n\n"
-      "  char:     characters\n"
-      "  sym:      symbolic keys or modified key\n"
-      "  function: function keys (F1..FN)\n"
-      "  mouse:    mouse events\n"
-      "  all:      char|sym|function\n\n"
-      "_ACTION_\n\n"
-      "  ignore:   discard key\n"
-      "  pass:     write key to program\n"
-      "  reeval:   re-evaluate (leave key chain, rehandle key again)",
-   .args  = (const char*[]) { "+TYPES", "ACTION", 0 },
+      "_TYPE_\n"
+      " *char*     characters\n"
+      " *sym*      symbolic keys or modified key\n"
+      " *function* function keys (F1..FN)\n"
+      " *mouse*    mouse events\n"
+      " *all*      char|sym|function\n\n"
+      "_ACTION_\n"
+      " *ignore*   discard key\n"
+      " *pass*     write key to program\n"
+      " *reeval*   re-evaluate (leave key chain, rehandle key again)",
+   .args  = (const char*[]) { "+TYPE", "ACTION", 0 },
    .opts  = NULL,
    .parse = &unbound
 };
@@ -116,7 +116,7 @@ static int repeat(int argc, char *args[], option *options) {
    else if (streq(args[0], "off"))
       context.current_mode->repeat_enabled = 0;
    else {
-      write_error("argument has to be 'on' or 'off'");
+      write_error("%s: '%s' {on|off}", strerror(EINVAL), args[0]);
       return 0;
    }
 

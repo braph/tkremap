@@ -1,5 +1,5 @@
-#include "common.h"
 #include "tkremap.h"
+#include "common.h"
 #include "errormsg.h"
 #include "termkeystuff.h"
 

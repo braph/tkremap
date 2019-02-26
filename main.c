@@ -1,19 +1,16 @@
+#include "tkremap.h"
 #include "conf.h"
 #include "help.h"
-#include "tkremap.h"
 #include "vi_conf.h"
 #include "commands.h"
 #include "termkeystuff.h"
 
 #include <err.h>
 #include <poll.h>
-#include <errno.h>
-#include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <termios.h>
 #include <sys/wait.h>
 
 #define USAGE \

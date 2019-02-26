@@ -155,9 +155,9 @@ static void help_command(command_t *cmd, int full) {
    if (cmd->args) {
       for (const char **arg = cmd->args; *arg; ++arg)
          if (**arg == '+')
-            PA(" _%s_ ...", *arg + 1);
+            PA(" _%s_...", *arg + 1);
          else
-            PA(" _%s_ ", *arg);
+            PA(" _%s_", *arg);
    }
 
    P("\n");

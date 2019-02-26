@@ -3,10 +3,10 @@
 
 #include <errno.h>
 #include <stdint.h>
-#include <sys/types.h>
 #include <termios.h>
 #include <pthread.h>
 #include <termkey.h>
+#include <sys/types.h>
 
 #include "options.h"
 #include "termkeystuff.h"

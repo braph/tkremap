@@ -179,7 +179,7 @@ const command_t command_readline = {
    .name  = "readline",
    .desc  = 
       "Write to program using readline\n\n"
-      "The program's window content is refreshed by resizing its pty.\n"
+      "(1) The program's window content is refreshed by resizing its pty.\n"
       "You may use *-R* in conjunction with *-k* to send a key (e.g. *C-l*) for refreshing\n"
       "the screen instead. (This may be faster)",
    .args  = NULL,

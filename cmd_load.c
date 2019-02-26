@@ -22,29 +22,28 @@ int load_conf_at(const char *dir, const char *f) {
       write_error("%s: %s", f, strerror(ENOENT));
 
    if (chdir(oldcwd))
-      errx(1, "Could not go to old working directory");
+      err(1, "chdir(%s)", oldcwd);
 
    return ret;
 }
 
 int load_conf(const char *f) {
    char dir[4096];
+   const char *xdg_home, *home;
 
    if (strchr(f, '/'))
       return read_conf_file(f);
 
-   if (load_conf_at(".", f))
+   if (read_conf_file(f))
       return 1;
 
-   const char *xdg_home = getenv("XDG_CONFIG_HOME");
-   if (xdg_home) {
+   if ((xdg_home = getenv("XDG_CONFIG_HOME"))) {
       sprintf(dir, "%s/%s", xdg_home, CFG_DIR_NAME);
       if (load_conf_at(dir, f))
          return 1;
    }
 
-   const char *home = getenv("HOME");
-   if (home) {
+   if ((home = getenv("HOME"))) {
       sprintf(dir, "%s/.config/%s", home, CFG_DIR_NAME);
       if (load_conf_at(dir, f))
          return 1;

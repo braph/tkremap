@@ -1,15 +1,12 @@
 PROGNAME   = tkremap
 LIBS 		  = -lutil -ltermkey -lcurses -lpthread -lreadline
 PREFIX     = /usr
-DEBUG 	  = 0
-FREE  	  = 0
 STRIP      = strip
 CC_FLAGS   = -Wall
 
 ifeq ($(DEBUG), 1)
-	FREE = 1
-	CC_FLAGS += -g
-	STRIP = true
+	CC_FLAGS += -g -DFREE_MEMORY=1 -DDEBUG=1
+	STRIP     = true
 else
 	CC_FLAGS += -O3
 endif
@@ -18,12 +15,10 @@ ifeq ($(README), 1)
 CC_FLAGS += -DBOLD='"**"' -DBOLD_END='"**"' -DITALIC='"_"' -DITALIC_END='"_"'
 endif
 
-CC_FLAGS += -DFREE_MEMORY=$(FREE) -DDEBUG=$(DEBUG)
-
 CMDS = goto ignore key load mask pass readline signal write
 CMDS := $(addprefix cmd_, $(CMDS))
 
-OBJS  = termkeystuff bind_parse tkremap conf lexer options commands help errormsg $(CMDS)
+OBJS  = $(CMDS) termkeystuff bind_parse tkremap conf lexer options commands help errormsg
 OBJS := $(addsuffix .o, $(OBJS))
 
 build: $(OBJS)

@@ -29,14 +29,14 @@ command_t*
 _get_command(command_t **arr, int size, const char *name) {
    command_t *cmd = NULL;
 
-   for (int i = size; i--; )
-      if (strprefix(arr[i]->name, name)) {
+   while (size--)
+      if (strprefix(arr[size]->name, name)) {
          if (cmd) {
             write_error("%s: %s", E_AMBIGIOUS_CMD, name);
             return NULL;
          }
          else
-            cmd = arr[i];
+            cmd = arr[size];
       }
 
    if (! cmd)
