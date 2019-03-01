@@ -1,6 +1,7 @@
 #include "tkremap.h"
 #include "conf.h"
 #include "help.h"
+#include "errormsg.h"
 #include "vi_conf.h"
 #include "commands.h"
 #include "termkeystuff.h"
@@ -28,7 +29,8 @@
 " *-h* _COMMAND_\n"                                              \
 " *-h* commands\n"                                               \
 " *-h* config\n"                                                 \
-" *-h* keys\n"
+" *-h* keys\n"                                                   \
+" *-h* all\n"
 #define GETOPT_OPTS "+c:C:m:b:k:hvu:"
 
 /* TODO: repeat-max
@@ -38,11 +40,10 @@
 
 void   cleanup();
 void   sighandler(int);
-char*  alias(const char*, ...);
 void   tmux_fix();
 int    load_conf(const char *); // cmd_load.c
-
-char *alias_buf = NULL;
+char*  alias(const char*, ...);
+char*  alias_buf = NULL;
 
 int main(int argc, char *argv[]) {
    int  c;
@@ -79,7 +80,7 @@ int main(int argc, char *argv[]) {
             ERR(" '%s': %s", optarg, get_error());
       case 'k':
          if ((arg2 = argv[optind++]) == NULL)
-            ERR(" '%s': missing argument", optarg);
+            ERR(" '%s': %s", optarg, E_MISSING_ARG);
          if (! read_conf_string(alias("bind %s key %s", optarg, arg2)))
             ERR(" '%s' '%s': %s", optarg, arg2, get_error());
       case 'v':
@@ -93,7 +94,7 @@ int main(int argc, char *argv[]) {
    free(alias_buf);
 
    if (optind == argc)
-      errx(1, "Missing command");
+      errx(1, "%s: command", E_MISSING_ARG);
 
    if (forkapp(&argv[optind], &context.program_fd, &context.program_pid) < 0)
       err(1, "Could not start process");
@@ -113,8 +114,8 @@ int main(int argc, char *argv[]) {
    signal(SIGWINCH, update_pty_size);
    setbuf(stdin, NULL);
 
-   #define bufsz 16
-   context.input_buffer = malloc(bufsz);
+   #define BUFSZ 16
+   context.input_buffer = malloc(BUFSZ);
    context.input_len = 0;
    #define ESCDELAY_MS 10
 
@@ -178,7 +179,6 @@ char* alias(const char *template, ...) {
    va_end(ap);
 
    alias_buf = realloc(alias_buf, sz);
-
    va_start(ap, template);
    vsprintf(alias_buf, template, ap);
    va_end(ap);
@@ -205,9 +205,7 @@ void sighandler(int sig) {
 
 void tmux_fix() {
    if (getenv("TMUX") && fork() == 0) {
-      close(0);
-      close(1);
-      close(2);
+      close(0); close(1); close(2);
       execlp("tmux", "tmux", "setw", "escape-time", "50", NULL);
    }
 }

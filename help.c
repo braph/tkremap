@@ -2,6 +2,8 @@
 
 #include "conf.h"
 #include "common.h"
+#include "unistd.h"
+#include "errormsg.h"
 #include "commands.h"
 
 #include <string.h>
@@ -72,17 +74,17 @@ int help(const char *prog, const char *usage, const char *topic) {
       conf = (command_t*) get_conf_command(topic);
 
       if (cmd) {
-         if (conf)
-            P("(Command)\n");
+         if (conf) P("(Command)\n");
          help_command(cmd, 1);
       }
       if (conf) {
-         if (cmd)
-            P("(Config)\n");
+         if (cmd)  P("(Config)\n");
          help_command(conf, 1);
       }
-      if (!cmd && !conf)
-         PA(usage, prog);
+      if (!cmd && !conf) {
+         print_usage(usage, prog);
+         P("%s: %s", E_UNKNOWN_CMD, topic);
+      }
    }
 
    return 0;
@@ -266,9 +268,16 @@ static char* fill_attrs(const char *s) {
 
    do {
       switch (*s) {
-         case '*':   strcat(r, attrs[0 + (state = !state)]);    break;
-         case '_':   strcat(r, attrs[2 + (state = !state)]);    break;
-         case '\\':  strncat(r, ++s, 1);                        break;
+         case '*':   
+            if (isatty(1))
+               strcat(r, attrs[0 + (state = !state)]);
+            break;
+         case '_':
+            if (isatty(1))
+               strcat(r, attrs[2 + (state = !state)]);
+            break;
+         case '\\':  strncat(r, ++s, 1);
+            break;
          default:    strncat(r, s, 1);
       }
    } while (*++s);
