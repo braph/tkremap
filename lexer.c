@@ -257,25 +257,21 @@ static int read_word() {
 }
 
 int lex() {
-   int c;
+   int c = lex_getc();
 
-   while ((c = lex_getc()) != EOF) {
-      switch (c) {
-         case '#':   consume_comment();
-                     break;
-         case '"':   return read_double_quote();
-         case '\'':  return read_single_quote();
-         case ';':
-         case '\n':  return LEX_TOKEN_END;
-         case ' ':
-         case '\t':  break;
-         default:    lex_ungetc(c);
-                     return read_word();
-      }
+   switch (c) {
+      case '"':   return read_double_quote();
+      case '\'':  return read_single_quote();
+      case ';':
+      case '\n':  return LEX_TOKEN_END;
+      case '#':   consume_comment(); /* fall through */
+      case ' ':
+      case '\t':  return lex();
+      case EOF:   lex_is_eof = 1;
+                  return EOF;
+      default:    lex_ungetc(c);
+                  return read_word();
    }
-
-   lex_is_eof = 1;
-   return EOF;
 }
 
 int lex_eof() {

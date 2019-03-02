@@ -20,20 +20,20 @@ static COMMAND_PARSE_FUNC(parse) {
    const char   *seq;
    int           repeat    = 1;
    cmd_key_args *cmd_args  = NULL;
-   char         *sequences = malloc(argc * 16);
+   char          sequences[argc * 16];
    sequences[0] = 0;
 
    for (option *opt = options; opt->opt; ++opt) {
       if (opt->opt == 'r')
          if ((repeat = atoi(opt->arg)) <= 0) {
             write_error("%s: %s", strerror(EINVAL), opt->arg);
-            goto END_OR_ERROR;
+            return NULL;
          }
    }
 
    for (int i = 0; i < argc; ++i) {
       if (! (seq = key_parse_get_code(args[i])))
-         goto END_OR_ERROR;
+         return NULL;
       strcat(sequences, seq);
    }
 
@@ -41,9 +41,7 @@ static COMMAND_PARSE_FUNC(parse) {
    cmd_args->repeat = repeat;
    strcpy(cmd_args->string, sequences);
 
-END_OR_ERROR:
-   free(sequences);
-   return (void*) cmd_args; // is NULL if failed
+   return (void*) cmd_args;
 }
 
 const command_t command_key = {
