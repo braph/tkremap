@@ -16,7 +16,7 @@
 
 #define USAGE \
 "Usage: *%s* [_OPTIONS_] PROGRAM [ARGUMENTS...]\n\n"             \
-"OPTIONS\n\n"                                                    \
+"_OPTIONS_\n\n"                                                  \
 " *-C* _STRING_\t"        "Read config string\n"                 \
 " *-c* _FILE_\t"          "Read config file (see -h load)\n"     \
 " *-m* _MODE_\t"          "Switch mode\n"                        \

@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <unistd.h>
 
-typedef struct cmd_key_args {
-   uint16_t repeat;
-   char     string[1];
+typedef struct __attribute__((__packed__)) cmd_key_args {
+   short repeat;
+   char  string[1];
 } cmd_key_args;
 
 static COMMAND_CALL_FUNC(call) {

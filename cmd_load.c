@@ -19,10 +19,10 @@ int load_conf_at(const char *dir, const char *f) {
    if (! access(f, F_OK))
       ret = read_conf_file(f);
    else
-      write_error("%s: %s", f, strerror(ENOENT));
+      write_error("%s: %s", strerror(ENOENT), f);
 
    if (chdir(oldcwd))
-      err(1, "chdir(%s)", oldcwd);
+      warn("chdir(%s)", oldcwd);
 
    return ret;
 }
@@ -70,7 +70,7 @@ const command_t command_load = {
             "If file is a sole filename it will be\n"
             "searched in the following places:\n"
             " - $PWD\n"
-            " - $XDG\\_CONFIG\\_HOME/." CFG_DIR_NAME "\n"
+            " - $XDG\\_CONFIG\\_HOME/" CFG_DIR_NAME "\n"
             " - $HOME/.config/" CFG_DIR_NAME "\n"
             " - $HOME/." CFG_DIR_NAME,
    .args  = (const char*[]) { "FILE", 0 },

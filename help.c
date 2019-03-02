@@ -300,3 +300,6 @@ static void help_keys() {
    );
 }
 
+static void help_modes() {
+   // TODO
+}

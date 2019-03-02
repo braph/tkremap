@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 
-typedef struct cmd_write_args {
+typedef struct __attribute__((__packed__)) cmd_write_args {
    short repeat;
    char  string[1];
 } cmd_write_args;
