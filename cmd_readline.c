@@ -120,6 +120,8 @@ static COMMAND_CALL_FUNC(call) {
       refresh_window(context.program_fd);
    if (args->keyseq)
       writes_to_program(args->keyseq);
+
+   return 1;
 }
 
 static void cmd_readline_free(void *);

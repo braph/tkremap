@@ -72,12 +72,16 @@ void writes_to_program(const char *s) {
 void context_init() {
    context.keymodes        = NULL;
    context.n_keymodes      = 0;
-   context.current_mode    = &context.default_mode;
-   context.current_binding = NULL;
    context.mask            = 0;
    context.repeat          = 0;
-   keymode_init(&context.global_mode,  "global",  UNBOUND_PASS);
-   keymode_init(&context.default_mode, "default", UNBOUND_PASS);
+   context.stack_index     = 0;
+   context.input_len       = 0;
+   context.current_binding = NULL;
+   context.current_mode    = &context.default_mode;
+   for (int i = 0; i < MODESTACK_SIZE; ++i)
+      context.modestack[i] = &context.default_mode;
+   keymode_init(&context.global_mode,  "global");
+   keymode_init(&context.default_mode, "default");
 }
 
 #if FREE_MEMORY
@@ -94,17 +98,14 @@ void context_free() {
 #endif
 
 
-void keymode_init(keymode_t *km, const char *name, int unbound_action) {
+void keymode_init(keymode_t *km, const char *name) {
    km->name             = strdup(name);
-   km->unbound_unicode  = unbound_action;
-   km->unbound_keysym   = unbound_action;
-   km->unbound_function = unbound_action;
-   km->unbound_mouse    = unbound_action;
-   km->repeat_enabled   = 0;
-   km->root             = malloc(sizeof(binding_root_t));
-   km->root->size       = 0;
-   km->root->p.bindings = NULL;
+   km->root             = calloc(1, sizeof(binding_root_t));
    km->root->type       = BINDING_TYPE_CHAINED;
+   km->unbound[0]       =
+      km->unbound[1]    =
+      km->unbound[2]    =
+      km->unbound[3]    = 0;
 }
 
 keymode_t* get_keymode(const char *name) {
@@ -122,8 +123,8 @@ keymode_t* get_keymode(const char *name) {
 }
 
 keymode_t* add_keymode(const char *name) {
-   keymode_t *km = malloc(sizeof(*km));
-   keymode_init(km, name, UNBOUND_IGNORE);
+   keymode_t *km = calloc(1, sizeof(*km));
+   keymode_init(km, name);
 
    context.n_keymodes++;
    context.keymodes = realloc(context.keymodes, context.n_keymodes * sizeof(km));
@@ -259,23 +260,19 @@ char* args_get_arg(int *argc, char ***argv, const char *name) {
    return ret;
 }
 
-char** argsdup(int argc, char **args) {
-   char **dargs = malloc((argc + 1) * sizeof(char*));
-   dargs[argc] = NULL;
-   for (int i = argc; i--; )
-      dargs[i] = strdup(args[i]);
-   return dargs;
-}
-
 void* copyargs(int argc, char *args[], option *options) {
    command_args_t *cmdargs = malloc(sizeof(command_args_t));
+   cmdargs->args           = malloc((argc + 1) * sizeof(char*));
    cmdargs->argc           = argc;
-   cmdargs->args           = argsdup(argc, args);
+   cmdargs->args[argc]     = NULL;
+   for (int i = argc; i--; )
+      cmdargs->args[i]     = strdup(args[i]);
    return cmdargs;
 }
 
 void unpackargs(int *argc, char ***args, option** options, command_args_t* cmdargs) {
-   *argc = cmdargs->argc;
+   if (argc)
+      *argc = cmdargs->argc;
    *args = cmdargs->args;
 }
 
@@ -287,7 +284,6 @@ void deleteargs(void *_args) {
 
 void handle_key(TermKeyKey *key) {
    binding_t *binding;
-   int unbound_action = UNBOUND_PASS;
 
    // Masked mode =============================================================
    if (context.mask) {
@@ -302,21 +298,15 @@ void handle_key(TermKeyKey *key) {
       else {
          context.current_binding = NULL;
 
-         if (key->type == TERMKEY_TYPE_KEYSYM || (key->type == TERMKEY_TYPE_UNICODE && key->modifiers))
-            unbound_action = context.current_mode->unbound_keysym;
-         else if (key->type == TERMKEY_TYPE_UNICODE)
-            unbound_action = context.current_mode->unbound_unicode;
-         else if (key->type == TERMKEY_TYPE_FUNCTION)
-            unbound_action = context.current_mode->unbound_function;
-         else if (key->type == TERMKEY_TYPE_MOUSE)
-            unbound_action = context.current_mode->unbound_mouse;
+         int keytype = key->type;
+         if (keytype == TERMKEY_TYPE_UNICODE && key->modifiers)
+            keytype = TERMKEY_TYPE_KEYSYM; // treat Ctrl/Alt as keysym
 
-         if (unbound_action == UNBOUND_IGNORE)
-            return;
-         else if (unbound_action == UNBOUND_REEVAL)
-            return handle_key(key);
-         else // UNBOUND_PASS
-            goto WRITE_RAW;
+         if (context.current_mode->unbound[keytype]) {
+            commands_execute(context.current_mode->unbound[keytype], key);
+         }
+
+         return;
       }
    }
 
@@ -331,18 +321,14 @@ void handle_key(TermKeyKey *key) {
    }
 
    // === Try current_mode then global_mode ===================================
-   keymode_t *keymode = context.current_mode;
+   if (context.current_mode == &context.global_mode) // This should actually
+      context.current_mode = &context.default_mode;  // never happen
 
-   NEXT_KEYMODE:
-   if ((binding = binding_get_binding(keymode->root, key))) {
-      binding_execute(binding, keymode, key);
-      return;
-   }
+   if ((binding = binding_get_binding(context.current_mode->root, key)))
+      return binding_execute(binding, context.current_mode, key);
 
-   if (keymode != &context.global_mode) {
-      keymode = &context.global_mode;
-      goto NEXT_KEYMODE;
-   }
+   if ((binding = binding_get_binding(context.global_mode.root, key)))
+      return binding_execute(binding, &context.global_mode, key);
    // =========================================================================
 
    // We have the chance to start a command repetition ========================
@@ -359,17 +345,14 @@ void handle_key(TermKeyKey *key) {
    }
 
    // Handle unbound key ======================================================
-   if (key->type == TERMKEY_TYPE_KEYSYM || (key->type == TERMKEY_TYPE_UNICODE && key->modifiers))
-      unbound_action = context.current_mode->unbound_keysym;
-   else if (key->type == TERMKEY_TYPE_UNICODE)
-      unbound_action = context.current_mode->unbound_unicode;
-   else if (key->type == TERMKEY_TYPE_FUNCTION)
-      unbound_action = context.current_mode->unbound_function;
-   else if (key->type == TERMKEY_TYPE_MOUSE)
-      unbound_action = context.current_mode->unbound_mouse;
+   int keytype = key->type;
+   if (keytype == TERMKEY_TYPE_UNICODE && key->modifiers)
+      keytype = TERMKEY_TYPE_KEYSYM; // treat Ctrl/Alt as keysym
 
-   if (unbound_action == UNBOUND_IGNORE || unbound_action == UNBOUND_REEVAL)
+   if (context.current_mode->unbound[keytype]) {
+      commands_execute(context.current_mode->unbound[keytype], key);
       return;
+   }
 
    WRITE_RAW:
    write(context.program_fd, context.input_buffer, context.input_len);

@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
-import re
-import sys
+import re, sys
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -17,10 +16,13 @@ words = {
     'unbind':     'unbi',
     'unbound':    'unbo',
     'repeat':     'rep',
+    'rehandle':   'reh',
     'readline':   'rea',
     'write':      'wr',
     'key':        'ke',
-    'ignore':     'ig'
+    'ignore':     'ig',
+    'pop':        'po',
+    'pop-mode':   'po'
 }
 
 def strip_conf(s):

@@ -32,7 +32,7 @@ static COMMAND_CALL_FUNC(cmd_bind_call) {
       else {
          if (binding_next->type == BINDING_TYPE_COMMAND) {
             write_error("Overwriting key binding"); // TODO
-            //return 0; TODO return value?
+            return 0;
          }
 
          binding = binding_next;
@@ -41,26 +41,26 @@ static COMMAND_CALL_FUNC(cmd_bind_call) {
 
    if (binding == context.current_mode->root) {
       write_error("%s: %s", E_MISSING_ARG, "KEY");
-      //return 0; // TODO return value
+      return 0;
    }
 
    if (binding->type == BINDING_TYPE_COMMAND) {
       write_error("Overwriting key binding");
-      //return 0; // TODO return value
+      return 0;
    }
 
    if (binding->type == BINDING_TYPE_CHAINED && binding->size > 0) {
       write_error("Overwriting key binding");
-      //return 0; // TODO return value
+      return 0;
    }
 
    if (argc == 0) {
       write_error("%s: %s", E_MISSING_ARG, "COMMAND");
-      //return 0; // TODO return value
+      return 0;
    }
 
    binding->type = BINDING_TYPE_COMMAND;
-   /*return*/ binding_append_commands(binding, argc, args);
+   return binding_append_commands(binding, argc, args);
 }
 
 command_t command_bind = {

@@ -36,7 +36,7 @@ static char* firstline(const char *s) {
 
 static void pad_right(int n) {
    while (n--)
-      P(" ");
+      putchar(' ');
 }
 
 static const char *attrs[] = {
@@ -50,7 +50,6 @@ static void  help_keys();
 static void  help_command(command_t *cmd, int full);
 static void  help_commands(int full);
 static void  print_all(const char *prog, const char *usage);
-static void  print_usage(const char *prog, const char *usage);
 
 static char* fill_attrs(const char *);
 static char* indent(const char *, int);
@@ -59,7 +58,7 @@ int help(const char *prog, const char *usage, const char *topic) {
    command_t *cmd = 0;
 
    if (! topic)
-      print_usage(prog, usage);
+      PA(usage, prog);
    else if (streq(topic, "all"))
       print_all(prog, usage);
    else if (streq(topic, "keys"))
@@ -67,13 +66,10 @@ int help(const char *prog, const char *usage, const char *topic) {
    else if (strprefix("commands", topic))
       help_commands(0);
    else {
-      cmd  = get_command(topic);
-
-      if (cmd) {
+      if ((cmd = get_command(topic)))
          help_command(cmd, 1);
-      }
       else {
-         print_usage(usage, prog);
+         PA(usage, prog);
          P("%s: %s", E_UNKNOWN_CMD, topic);
       }
    }
@@ -81,13 +77,8 @@ int help(const char *prog, const char *usage, const char *topic) {
    return 0;
 }
 
-static void print_usage(const char *prog, const char *usage) {
-   PA(usage, prog);
-   P("\n");
-}
-
 static void print_all(const char *prog, const char *usage) {
-   print_usage(prog, usage);
+   PA(usage, prog);
    help_commands(1);
    help_keys();
 }
@@ -114,7 +105,7 @@ static char* get_option_string(command_t *cmd ) {
       *f = *o = 0;
 
       if (strlen(flags))
-         strcat(r, "[-"), strcat(r, flags), strcat(r, "]");
+         sprintf(r, "[-%s]", flags);
       if (strlen(opts))
          strcat(r, opts + !strlen(flags));
    }
@@ -139,10 +130,9 @@ static void help_command(command_t *cmd, int full) {
 
    if (cmd->args) {
       for (const char **arg = cmd->args; *arg; ++arg)
-         if (**arg == '+')
-            PA(" _%s_...", *arg + 1);
-         else
-            PA(" _%s_", *arg);
+         if (**arg == '+')  PA(" _%s_...",    *arg + 1); else
+         if (**arg == '*')  PA(" [_%s_...]",  *arg + 1); else
+                            PA(" _%s_",       *arg);
    }
 
    P("\n");
@@ -175,58 +165,6 @@ static void help_command(command_t *cmd, int full) {
    P("\n");
 }
 
-/*
-static void help_command(command_t *cmd, int full) {
-   if (! full) {
-      PA("*%-15s* ", cmd->name);
-      PA(firstline(cmd->desc));
-      PA("\n");
-      return;
-   }
-
-   PA("*%s*", cmd->name);
-
-   if (cmd->opts)
-      P(" [OPTIONS]");
-
-   if (cmd->args) {
-      for (const char **arg = cmd->args; *arg; ++arg)
-         if (**arg == '+')
-            PA(" _%s_ ...", *arg + 1);
-         else
-            PA(" _%s_ ",    *arg);
-   }
-
-   P("\n");
-   P(indent(ATTRS(cmd->desc), 1));
-   P("\n");
-
-   if (cmd->opts) {
-      P("\n");
-
-      int max = 0;
-      for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt)
-         if (opt->meta)
-            max = (strlen(opt->meta) > max ? strlen(opt->meta) : max);
-
-      for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt) {
-         PA(" *-%c*", opt->opt);
-
-         if (opt->meta) {
-            PA(" _%s_", opt->meta);
-            pad_right(3 + max - strlen(opt->meta) - 1);
-         }
-         else
-            pad_right(3 + max);
-
-         PA("%s\n", opt->desc);
-      }
-   }
-
-   P("\n");
-}
-*/
-
 static
 char * indent(const char *str, int pad) {
    int   ind = -1;
@@ -253,12 +191,9 @@ static char* fill_attrs(const char *s) {
    do {
       switch (*s) {
          case '*':   
-            if (isatty(1))
-               strcat(r, attrs[0 + (state = !state)]);
-            break;
          case '_':
             if (isatty(1))
-               strcat(r, attrs[2 + (state = !state)]);
+               strcat(r, attrs[(2*(*s%2)) + (state = !state)]);
             break;
          case '\\':  strncat(r, ++s, 1);
             break;
@@ -281,9 +216,8 @@ static void help_keys() {
       "  *Alt*:     Alt-key, A-key, Meta-key, M-key\n"
       "  *Shift*:   Shift-key, S-key\n"
       "\n"
+      " *Special*\n"
+      "\n"
    );
 }
 
-static void help_modes() {
-   // TODO
-}

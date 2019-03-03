@@ -13,6 +13,8 @@ static COMMAND_CALL_FUNC(call) {
 
    for (int i = arg->repeat; i--; )
       writes_to_program(arg->string);
+
+   return 1;
 }
 
 static COMMAND_PARSE_FUNC(parse) {
@@ -43,7 +45,7 @@ static COMMAND_PARSE_FUNC(parse) {
 
 const command_t command_write = {
    .name  = "write",
-   .desc  = "Write string to program",
+   .desc  = "Send string to program",
    .args  = (const char*[]) { "+STRING", 0 },
    .opts  = (const command_opt_t[]) {
       { 'r', "N", "Repeat the string N times" },

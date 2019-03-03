@@ -64,9 +64,13 @@ int read_conf_stream(FILE *fh) {
          goto END;
       }
 
-      //cmdcall.command = command; (not needed here)
       cmdcall.arg     = cmdarg;
-      command->call(&cmdcall, NULL);
+      if (! command->call(&cmdcall, NULL)) {
+         if (command->free)
+            command->free(cmdarg);
+         ret = 0;
+         goto END;
+      }
       if (command->free)
          command->free(cmdarg);
 

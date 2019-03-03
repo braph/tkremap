@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 
 #define streq(a,b) \
@@ -30,7 +31,16 @@
       printf("]\n"); \
    } while(0)
 
+#define MEMDUP(PTR) \
+   memdup(PTR, sizeof(*PTR));
+
 inline __attribute__((always_inline))
 int strprefix(const char *string, const char *prefix) {
    return (strstr(string, prefix) == string);
+}
+
+inline __attribute__((always_inline))
+void* memdup(void *src, int size) {
+   void *dest = malloc(size);
+   return memcpy(dest, src, size);
 }

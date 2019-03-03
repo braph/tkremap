@@ -14,6 +14,8 @@ static COMMAND_CALL_FUNC(call) {
 
    for (int i = arg->repeat; i--; )
       writes_to_program(arg->string);
+
+   return 1;
 }
 
 static COMMAND_PARSE_FUNC(parse) {

@@ -7,6 +7,7 @@ extern command_t command_unbound;
 extern command_t command_unbind;
 extern command_t command_signal;
 extern command_t command_readline;
+extern command_t command_rehandle;
 extern command_t command_repeat;
 extern command_t command_pass;
 extern command_t command_mode;
@@ -21,8 +22,9 @@ command_t* commands[] = {
    &command_unbound,
    &command_unbind,
    &command_signal,
-   &command_readline,
    &command_repeat,
+   &command_rehandle,
+   &command_readline,
    &command_pass,
    &command_mode,
    &command_mask,

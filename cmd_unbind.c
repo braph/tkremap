@@ -1,17 +1,16 @@
 #include "tkremap.h"
 
 static COMMAND_CALL_FUNC(cmd_unbind) {
-   int argc;
    char **args;
-   unpackargs(&argc, &args, NULL, (command_args_t*) cmd->arg);
+   unpackargs(NULL, &args, NULL, (command_args_t*) cmd->arg);
 
    TermKeyKey tkey;
 
    if (! parse_key(args[0], &tkey))
-      return ;//0; TODO ret
+      return 0;
 
    binding_del_binding(context.current_mode->root, &tkey);
-   return; // TODO RET 1;
+   return 1;
 }
 
 command_t command_unbind = {

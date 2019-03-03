@@ -1,10 +1,7 @@
 #include "tkremap.h"
-#include "conf.h"
-#include "help.h"
 #include "errormsg.h"
 #include "vi_conf.h"
-#include "commands.h"
-#include "termkeystuff.h"
+#include "conf.h"
 
 #include <err.h>
 #include <poll.h>
@@ -19,30 +16,25 @@
 "_OPTIONS_\n\n"                                                  \
 " *-C* _STRING_\t"        "Read config string\n"                 \
 " *-c* _FILE_\t"          "Read config file (see -h load)\n"     \
-" *-m* _MODE_\t"          "Switch mode\n"                        \
+" *-m* _MODE_\t"          "Switch to _MODE_\n"                   \
 " *-b* _KEY_ _CMD_\t"     "Alias for 'bind _KEY_ _CMD_'\n"       \
 " *-k* _IN_ _OUT_\t"      "Alias for 'bind _IN_ key _OUT_'\n"    \
 " *-u* _KEY_\t\t"         "Alias for 'unbind _KEY_\n"            \
-" *-v*\t\t"               "Load vi config\n"                     \
+" *-v*\t\t"               "Load builtin vi config\n"             \
 "\n" \
 "For more help:\n"                                               \
 " *-h* _COMMAND_\n"                                              \
 " *-h* commands\n"                                               \
 " *-h* keys\n"                                                   \
-" *-h* all\n"
+" *-h* all\n\n"
 #define GETOPT_OPTS "+c:C:m:b:k:hvu:"
-
-/* TODO: repeat-max
- * TODO: instant-leave mode? 
- * TODO: escape-char
- * search for configuration files per application basis */
 
 void   cleanup();
 void   sighandler(int);
 void   tmux_fix();
-int    load_conf(const char *); // cmd_load.c
 char*  alias(const char*, ...);
-char*  alias_buf = NULL;
+int    load_conf(const char *);                       // cmd_load.c
+int    help(const char *, const char*, const char *); // help.c
 
 int main(int argc, char *argv[]) {
    int  c;
@@ -89,8 +81,7 @@ int main(int argc, char *argv[]) {
          return 1;
       }
       #undef case
-      #undef ERR
-   free(alias_buf);
+   alias(NULL); // free
 
    if (optind == argc)
       errx(1, "%s: command", E_MISSING_ARG);
@@ -113,16 +104,11 @@ int main(int argc, char *argv[]) {
    signal(SIGWINCH, update_pty_size);
    setbuf(stdin, NULL);
 
-   #define BUFSZ 16
-   context.input_buffer = malloc(BUFSZ);
-   context.input_len = 0;
    #define ESCDELAY_MS 10
-
    struct pollfd fds[2] = {
       { .fd = STDIN_FILENO,       .events = POLLIN },
       { .fd = context.program_fd, .events = POLLIN }
    };
-
    TermKeyKey key;
    TermKeyKey escape = {
       .type      = TERMKEY_TYPE_KEYSYM,
@@ -169,20 +155,25 @@ int main(int argc, char *argv[]) {
 }
 
 char* alias(const char *template, ...) {
-   va_list ap;
-   int sz = strlen(template);
+   static char* buf = 0;
+   if (! template) {
+      free(buf);
+      return 0;
+   }
 
+   int sz = strlen(template);
+   va_list ap;
    va_start(ap, template);
    for (const char *s = strchr(template, '%'); s; s = strchr(s + 1, '%'))
       sz += strlen(va_arg(ap, char*));
    va_end(ap);
 
-   alias_buf = realloc(alias_buf, sz);
+   buf = realloc(buf, sz);
    va_start(ap, template);
-   vsprintf(alias_buf, template, ap);
+   vsprintf(buf, template, ap);
    va_end(ap);
 
-   return alias_buf;
+   return buf;
 }
 
 void cleanup() {

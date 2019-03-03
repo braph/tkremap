@@ -3,7 +3,7 @@
 
 // === mask ===================================================================
 static COMMAND_CALL_FUNC(cmd_mask) {
-   context.mask = 1;
+   return (context.mask = 1);
 }
 
 const command_t command_mask = {
@@ -16,18 +16,19 @@ const command_t command_mask = {
 // === pass ===================================================================
 static COMMAND_CALL_FUNC(cmd_pass) {
    writeb_to_program(context.input_buffer, context.input_len);
+   return 1;
 }
 
 const command_t command_pass = {
    COMMAND_T_INIT,
    .name  = "pass",
-   .desc  = "Write the pressed key to the program",
+   .desc  = "Send the pressed key to the program",
    .call  = &cmd_pass,
 };
 
 // === ignore =================================================================
 static COMMAND_CALL_FUNC(cmd_ignore) {
-   (void) 0;
+   return 1;
 }
 
 const command_t command_ignore = {
@@ -39,10 +40,19 @@ const command_t command_ignore = {
 
 // === mode ===================================================================
 static COMMAND_CALL_FUNC(cmd_mode) {
-   context.current_mode = (keymode_t*) cmd->arg;
+   if (((uintptr_t) cmd->arg) == 1)
+      context.current_mode = context.modestack[--context.stack_index];
+   else
+      context.modestack[++context.stack_index] =
+         context.current_mode =
+            (keymode_t*) cmd->arg;
+   return 1;
 }
 
 static COMMAND_PARSE_FUNC(cmd_mode_parse) {
+   if (streq(args[0], "-p"))
+      return (void*) (uintptr_t) 1;
+
    keymode_t *km = get_keymode(args[0]);
 
    if (! km)
@@ -54,8 +64,8 @@ static COMMAND_PARSE_FUNC(cmd_mode_parse) {
 const command_t command_mode = {
    COMMAND_T_INIT,
    .name  = "mode",
-   .desc  = "Switch to _MODE_",
-   .args  = (const char*[]) { "MODE", 0 },
+   .desc  = "Switch to _MODE_\n\nPass *-p* for previous mode",
+   .args  = (const char*[]) { "MODE|-p", 0 },
    .call  = &cmd_mode,
    .parse = &cmd_mode_parse
 };
@@ -66,6 +76,7 @@ const command_t command_mode = {
 
 static COMMAND_CALL_FUNC(cmd_repeat) {
    context.current_mode->repeat_enabled = ((int) (uintptr_t) cmd->arg) - 1;
+   return 1;
 }
 
 static COMMAND_PARSE_FUNC(cmd_repeat_parse) {
@@ -82,8 +93,27 @@ static COMMAND_PARSE_FUNC(cmd_repeat_parse) {
 command_t command_repeat = {
    COMMAND_T_INIT,
    .name  = "repeat",
-   .desc  = "Enable repetition mode",
-   .args  = (const char*[]) { "on|off", 0 },
+   .desc  = "Enable repetition mode"
+  ,.args  = (const char*[]) { "on|off", 0 },
    .call  = &cmd_repeat,
    .parse = &cmd_repeat_parse
 };
+
+// === rehandle ===============================================================
+static COMMAND_CALL_FUNC(cmd_rehandle) {
+   if (context.rehandeled < REHANDLE_DEPTH_MAX) {
+      ++context.rehandeled;
+      handle_key(key);
+   }
+   else
+      context.rehandeled = 0;
+   return 1;
+}
+
+const command_t command_rehandle = {
+   COMMAND_T_INIT,
+   .name  = "rehandle",
+   .desc  = "Rehandle the current key",
+   .call  = &cmd_rehandle,
+};
+

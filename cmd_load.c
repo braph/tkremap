@@ -57,7 +57,7 @@ int load_conf(const char *f) {
 }
 
 static COMMAND_CALL_FUNC(call) {
-   load_conf((char*) cmd->arg);
+   return load_conf((char*) cmd->arg);
 }
 
 static COMMAND_PARSE_FUNC(parse) {

@@ -45,7 +45,7 @@ char* signal2name(int number) {
 
 static COMMAND_CALL_FUNC(call) {
    int sig = (int) (uintptr_t) cmd->arg;
-   kill(context.program_pid, sig);
+   return !kill(context.program_pid, sig);
 }
 
 static COMMAND_PARSE_FUNC(parse) {
