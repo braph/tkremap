@@ -72,7 +72,7 @@ void writes_to_program(const char *s) {
 void context_init() {
    context.keymodes        = NULL;
    context.n_keymodes      = 0;
-   context.current_mode    = &context.global_mode;
+   context.current_mode    = &context.default_mode;
    context.current_binding = NULL;
    context.mask            = 0;
    context.repeat          = 0;
@@ -257,6 +257,32 @@ char* args_get_arg(int *argc, char ***argv, const char *name) {
    char *ret = (*argv)[0];
    --(*argc), ++(*argv);
    return ret;
+}
+
+char** argsdup(int argc, char **args) {
+   char **dargs = malloc((argc + 1) * sizeof(char*));
+   dargs[argc] = NULL;
+   for (int i = argc; i--; )
+      dargs[i] = strdup(args[i]);
+   return dargs;
+}
+
+void* copyargs(int argc, char *args[], option *options) {
+   command_args_t *cmdargs = malloc(sizeof(command_args_t));
+   cmdargs->argc           = argc;
+   cmdargs->args           = argsdup(argc, args);
+   return cmdargs;
+}
+
+void unpackargs(int *argc, char ***args, option** options, command_args_t* cmdargs) {
+   *argc = cmdargs->argc;
+   *args = cmdargs->args;
+}
+
+void deleteargs(void *_args) {
+   command_args_t *args = (command_args_t*) _args;
+   freeArray(args->args, args->argc);
+   free(args);
 }
 
 void handle_key(TermKeyKey *key) {

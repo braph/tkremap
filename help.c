@@ -49,7 +49,6 @@ static const char *attrs[] = {
 static void  help_keys();
 static void  help_command(command_t *cmd, int full);
 static void  help_commands(int full);
-static void  help_conf_commands(int full);
 static void  print_all(const char *prog, const char *usage);
 static void  print_usage(const char *prog, const char *usage);
 
@@ -57,7 +56,7 @@ static char* fill_attrs(const char *);
 static char* indent(const char *, int);
 
 int help(const char *prog, const char *usage, const char *topic) {
-   command_t *cmd = 0, *conf = 0;
+   command_t *cmd = 0;
 
    if (! topic)
       print_usage(prog, usage);
@@ -67,21 +66,13 @@ int help(const char *prog, const char *usage, const char *topic) {
       help_keys();
    else if (strprefix("commands", topic))
       help_commands(0);
-   else if (strprefix("config", topic))
-      help_conf_commands(0);
    else {
       cmd  = get_command(topic);
-      conf = (command_t*) get_conf_command(topic);
 
       if (cmd) {
-         if (conf) P("(Command)\n");
          help_command(cmd, 1);
       }
-      if (conf) {
-         if (cmd)  P("(Config)\n");
-         help_command(conf, 1);
-      }
-      if (!cmd && !conf) {
+      else {
          print_usage(usage, prog);
          P("%s: %s", E_UNKNOWN_CMD, topic);
       }
@@ -97,22 +88,14 @@ static void print_usage(const char *prog, const char *usage) {
 
 static void print_all(const char *prog, const char *usage) {
    print_usage(prog, usage);
-   help_conf_commands(1);
    help_commands(1);
    help_keys();
 }
 
 static void help_commands(int full) {
-   PA("_Available commands_\n\n");
+   PA("_Commands_\n\n");
    for (int i = commands_size; i--; )
       help_command(commands[i], full);
-   P("\n");
-}
-
-static void help_conf_commands(int full) {
-   PA("_Configuration keywords_\n\n");
-   for (int i = conf_commands_size; i--; )
-      help_command((command_t*) conf_commands[i], full);
    P("\n");
 }
 
@@ -184,7 +167,8 @@ static void help_command(command_t *cmd, int full) {
          else
             pad_right(3 + max);
 
-         PA("%s\n", opt->desc);
+         PA(opt->desc);
+         P("\n");
       }
    }
 
@@ -289,8 +273,8 @@ static void help_keys() {
    PA(
       "_Keys_\n\n"
       " *Symbolic keys*\n"
-      "  Up/Down/Left/Right, PageUp/PageDown, Home/End,\n"
-      "  Insert/Delete, Space, Enter, Tab, Backspace, F1 .. F12\n"
+      "  Up/Down/Left/Right, PageUp/PageDown, Home/End, Insert/Delete,\n"
+      "  Escape, Space, Enter, Tab, Backspace, F1 .. F12\n"
       "\n"
       " *Modifiers*\n"
       "  *Control*: Control-key, Ctrl-key, C-key, ^key\n"

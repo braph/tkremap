@@ -22,13 +22,12 @@
 " *-m* _MODE_\t"          "Switch mode\n"                        \
 " *-b* _KEY_ _CMD_\t"     "Alias for 'bind _KEY_ _CMD_'\n"       \
 " *-k* _IN_ _OUT_\t"      "Alias for 'bind _IN_ key _OUT_'\n"    \
-" *-u* _KEY_\t"           "Alias for 'unbind _KEY_\n"            \
+" *-u* _KEY_\t\t"         "Alias for 'unbind _KEY_\n"            \
 " *-v*\t\t"               "Load vi config\n"                     \
 "\n" \
 "For more help:\n"                                               \
 " *-h* _COMMAND_\n"                                              \
 " *-h* commands\n"                                               \
-" *-h* config\n"                                                 \
 " *-h* keys\n"                                                   \
 " *-h* all\n"
 #define GETOPT_OPTS "+c:C:m:b:k:hvu:"

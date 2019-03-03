@@ -15,7 +15,7 @@ ifeq ($(README), 1)
 CC_FLAGS += -DBOLD='"**"' -DBOLD_END='"**"' -DITALIC='"_"' -DITALIC_END='"_"'
 endif
 
-CMDS = core key load readline signal write
+CMDS = bind unbind unbound core key load readline signal write
 CMDS := $(addprefix cmd_, $(CMDS))
 
 OBJS  = $(CMDS) termkeystuff bind_parse tkremap conf lexer options commands help errormsg

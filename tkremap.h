@@ -30,6 +30,9 @@ typedef const struct command_opt_t {
    const char *desc;
 } command_opt_t;
 
+#define COMMAND_T_INIT \
+   .args  = NULL, .opts = NULL, \
+   .parse = NULL, .free = NULL, .call = NULL
 typedef struct command_t {
    const char           *name;
    const char           *desc;
@@ -44,6 +47,11 @@ typedef struct command_call_t {
    command_t  *command;
    void       *arg;
 } command_call_t;
+
+typedef struct command_args_t {
+   int         argc;
+   char      **args;
+} command_args_t;
 
 #define COMMAND_CALL_FUNC(NAME)  void  NAME (struct command_call_t* cmd, TermKeyKey *key)
 #define COMMAND_PARSE_FUNC(NAME) void* NAME (int argc, char *args[], option *options)
@@ -121,14 +129,19 @@ void context_free();
 keymode_t* get_keymode(const char *name);
 keymode_t* add_keymode(const char *name);
 
-void  handle_key(TermKeyKey*);
-void  writes_to_program(const char *);
-void  writeb_to_program(const char *, ssize_t);
-int   check_args(int argc, const char *args[]); 
-char* args_get_arg(int *, char***, const char*);
-int   start_program_output();
-void  stop_program_output();
+void   handle_key(TermKeyKey*);
+void   writes_to_program(const char *);
+void   writeb_to_program(const char *, ssize_t);
+int    check_args(int argc, const char *args[]); 
+char*  args_get_arg(int *, char***, const char*);
+int    start_program_output();
+void   stop_program_output();
 const char *key_parse_get_code(const char *);
+
+char**   argsdup(int argc, char **args);
+void*    copyargs(int argc, char *args[], option* options);
+void     unpackargs(int *argc, char ***args, option** options, command_args_t*);
+void     deleteargs(void *_args);
 
 void  set_input_mode();
 void  get_cursor(int fd, int *x, int *y);

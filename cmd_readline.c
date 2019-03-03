@@ -179,9 +179,9 @@ const command_t command_readline = {
    .name  = "readline",
    .desc  = 
       "Write to program using readline\n\n"
-      "(1) The program's window content is refreshed by resizing its pty.\n"
+      "(1) The program's window content is refreshed by resizing its PTY.\n"
       "You may use *-R* in conjunction with *-k* to send a key (e.g. *C-l*) for refreshing\n"
-      "the screen instead. (This may be faster)",
+      "the screen instead (this may be more appropriate).",
    .args  = NULL,
    .opts  = (const command_opt_t[]) {
       {'p', "PROMPT", "Set prompt text"},

@@ -1,8 +1,5 @@
 #include "tkremap.h"
-
-#define COMMAND_T_INIT \
-   .args  = NULL,  .opts  = NULL, \
-   .parse = NULL,  .free  = NULL
+#include "common.h"
 
 // === mask ===================================================================
 static COMMAND_CALL_FUNC(cmd_mask) {
@@ -36,17 +33,16 @@ static COMMAND_CALL_FUNC(cmd_ignore) {
 const command_t command_ignore = {
    COMMAND_T_INIT,
    .name  = "ignore",
-   .desc  = "Do nothing\n"
-            "This command can be used to ignore keypresses.",
+   .desc  = "Completely ignore the current pressed key",
    .call  = &cmd_ignore,
 };
 
-// === goto ===================================================================
-static COMMAND_CALL_FUNC(cmd_goto) {
+// === mode ===================================================================
+static COMMAND_CALL_FUNC(cmd_mode) {
    context.current_mode = (keymode_t*) cmd->arg;
 }
 
-static COMMAND_PARSE_FUNC(cmd_goto_parse) {
+static COMMAND_PARSE_FUNC(cmd_mode_parse) {
    keymode_t *km = get_keymode(args[0]);
 
    if (! km)
@@ -55,11 +51,39 @@ static COMMAND_PARSE_FUNC(cmd_goto_parse) {
    return (void*) km;
 }
 
-const command_t command_goto = {
+const command_t command_mode = {
    COMMAND_T_INIT,
-   .name  = "goto",
-   .desc  = "Switch the current mode",
+   .name  = "mode",
+   .desc  = "Switch to _MODE_",
    .args  = (const char*[]) { "MODE", 0 },
-   .call  = &cmd_goto,
-   .parse = &cmd_goto_parse,
+   .call  = &cmd_mode,
+   .parse = &cmd_mode_parse
+};
+
+// === repeat =================================================================
+#define REPEAT_ON   2
+#define REPEAT_OFF  1
+
+static COMMAND_CALL_FUNC(cmd_repeat) {
+   context.current_mode->repeat_enabled = ((int) (uintptr_t) cmd->arg) - 1;
+}
+
+static COMMAND_PARSE_FUNC(cmd_repeat_parse) {
+   if (streq(args[0], "on"))
+      return (void*) (uintptr_t) REPEAT_ON;
+   else if (streq(args[0], "off"))
+      return (void*) (uintptr_t) REPEAT_OFF;
+   else {
+      write_error("%s: '%s' {on|off}", strerror(EINVAL), args[0]);
+      return NULL;
+   }
+}
+
+command_t command_repeat = {
+   COMMAND_T_INIT,
+   .name  = "repeat",
+   .desc  = "Enable repetition mode",
+   .args  = (const char*[]) { "on|off", 0 },
+   .call  = &cmd_repeat,
+   .parse = &cmd_repeat_parse
 };

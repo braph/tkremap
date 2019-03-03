@@ -2,26 +2,34 @@
 #include "errormsg.h"
 #include "commands.h"
 
-extern command_t command_key;
-extern command_t command_goto;
-extern command_t command_load;
-extern command_t command_pass;
-extern command_t command_mask;
 extern command_t command_write;
+extern command_t command_unbound;
+extern command_t command_unbind;
 extern command_t command_signal;
-extern command_t command_ignore;
 extern command_t command_readline;
+extern command_t command_repeat;
+extern command_t command_pass;
+extern command_t command_mode;
+extern command_t command_mask;
+extern command_t command_load;
+extern command_t command_key;
+extern command_t command_ignore;
+extern command_t command_bind;
 
 command_t* commands[] = {
-   &command_readline,
-   &command_signal,
-   &command_load,
-   &command_pass,
-   &command_mask,
    &command_write,
+   &command_unbound,
+   &command_unbind,
+   &command_signal,
+   &command_readline,
+   &command_repeat,
+   &command_pass,
+   &command_mode,
+   &command_mask,
+   &command_load,
+   &command_key,
    &command_ignore,
-   &command_goto,
-   &command_key
+   &command_bind
 };
 int commands_size = (sizeof(commands)/sizeof(commands[0]));
 

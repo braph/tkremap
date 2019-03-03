@@ -16,8 +16,8 @@ words = {
     'bind':       'bi',
     'unbind':     'unbi',
     'unbound':    'unbo',
-    'repeat':     're',
-    'goto':       'go',
+    'repeat':     'rep',
+    'readline':   'rea',
     'write':      'wr',
     'key':        'ke',
     'ignore':     'ig'
