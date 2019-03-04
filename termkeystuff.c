@@ -178,10 +178,8 @@ void unload_terminfo() {
 TermKeyKey* parse_key_new(const char *def) {
    TermKeyKey *key = malloc(sizeof(*key));
 
-   if (! parse_key(def, key)) {
-      free(key);
-      return NULL;
-   }
+   if (! parse_key(def, key))
+      return free(key), NULL;
 
    return key;
 }
@@ -218,8 +216,7 @@ int parse_key(const char *def, TermKeyKey *key) {
          return 1;
    }
 
-   write_error("%s: %s", E_INVALID_KEY, def);
-   return 0;
+   return write_error("%s: %s", E_INVALID_KEY, def), 0;
 }
 
 const char *format_key(TermKeyKey *key) {

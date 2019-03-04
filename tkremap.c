@@ -209,9 +209,8 @@ void commands_execute_with_repeat(binding_t *binding, keymode_t *km, TermKeyKey 
          commands_execute(binding, key);
       context.repeat = 0;
    }
-   else {
+   else
       commands_execute(binding, key);
-   }
 }
 
 static
@@ -220,18 +219,15 @@ void binding_execute(binding_t *binding, keymode_t *km, TermKeyKey *key) {
       commands_execute_with_repeat(binding, km, key);
       context.current_binding = NULL;
    }
-   else {
+   else
       context.current_binding = binding;
-   }
 }
 
 int check_args(int argc, const char *args[]) {
    for (const char **arg = args; *arg; ++arg) {
       if (**arg == '+') {
-         if (! argc) {
-            write_error("%s: %s", E_MISSING_ARG, (*arg+1));
-            return 0;
-         }
+         if (! argc)
+            return write_error("%s: %s", E_MISSING_ARG, (*arg+1)), 0;
 
          break; // OK
       }
@@ -239,10 +235,8 @@ int check_args(int argc, const char *args[]) {
          break; // OK
       }
       else {
-         if (! argc--) {
-            write_error("%s: %s", E_MISSING_ARG, *arg);
-            return 0;
-         }
+         if (! argc--)
+            return write_error("%s: %s", E_MISSING_ARG, *arg), 0;
       }
    }
 
@@ -250,14 +244,11 @@ int check_args(int argc, const char *args[]) {
 }
 
 char* args_get_arg(int *argc, char ***argv, const char *name) {
-   if (! *argc) {
-      write_error("%s: %s", E_MISSING_ARG, name);
-      return NULL;
-   }
+   if (! *argc)
+      return write_error("%s: %s", E_MISSING_ARG, name), NULL;
 
    char *ret = (*argv)[0];
-   --(*argc), ++(*argv);
-   return ret;
+   return --(*argc), ++(*argv), ret;
 }
 
 void* copyargs(int argc, char *args[], option *options) {
@@ -302,9 +293,8 @@ void handle_key(TermKeyKey *key) {
          if (keytype == TERMKEY_TYPE_UNICODE && key->modifiers)
             keytype = TERMKEY_TYPE_KEYSYM; // treat Ctrl/Alt as keysym
 
-         if (context.current_mode->unbound[keytype]) {
+         if (context.current_mode->unbound[keytype])
             commands_execute(context.current_mode->unbound[keytype], key);
-         }
 
          return;
       }
@@ -316,8 +306,8 @@ void handle_key(TermKeyKey *key) {
        context.repeat > 0                   &&
        key->type == TERMKEY_TYPE_UNICODE    &&
        key->code.codepoint == '0') {
-      context.repeat *= 10;
-      return;
+         context.repeat *= 10;
+         return;
    }
 
    // === Try current_mode then global_mode ===================================
@@ -349,10 +339,8 @@ void handle_key(TermKeyKey *key) {
    if (keytype == TERMKEY_TYPE_UNICODE && key->modifiers)
       keytype = TERMKEY_TYPE_KEYSYM; // treat Ctrl/Alt as keysym
 
-   if (context.current_mode->unbound[keytype]) {
-      commands_execute(context.current_mode->unbound[keytype], key);
-      return;
-   }
+   if (context.current_mode->unbound[keytype])
+      return commands_execute(context.current_mode->unbound[keytype], key);
 
    WRITE_RAW:
    write(context.program_fd, context.input_buffer, context.input_len);

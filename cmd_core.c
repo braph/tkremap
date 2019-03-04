@@ -15,8 +15,7 @@ const command_t command_mask = {
 
 // === pass ===================================================================
 static COMMAND_CALL_FUNC(cmd_pass) {
-   writeb_to_program(context.input_buffer, context.input_len);
-   return 1;
+   return writeb_to_program(context.input_buffer, context.input_len), 1;
 }
 
 const command_t command_pass = {
@@ -101,10 +100,9 @@ command_t command_repeat = {
 
 // === rehandle ===============================================================
 static COMMAND_CALL_FUNC(cmd_rehandle) {
-   if (context.rehandeled < REHANDLE_DEPTH_MAX) {
-      ++context.rehandeled;
-      handle_key(key);
-   }
+   if (context.rehandeled < REHANDLE_DEPTH_MAX)
+      ++context.rehandeled,
+         handle_key(key);
    else
       context.rehandeled = 0;
    return 1;

@@ -61,8 +61,6 @@ const command_t command_signal = {
    .name  = "signal",
    .desc  = "Send signal to program",
    .args  = (const char *[]) { "SIGNAL", 0 },
-   .opts  = NULL,
    .parse = &parse,
    .call  = &call,
-   .free  = NULL
 };

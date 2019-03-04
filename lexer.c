@@ -104,11 +104,11 @@ static int lex_getc() {
    }
 
    if (lex_buf[lex_buf_pos] == '\n') {
-      lex_line++;
+      lex_line++,
       lex_line_pos = 1;
-   } else {
-      lex_line_pos++;
    }
+   else
+      lex_line_pos++;
 
    return lex_buf[lex_buf_pos--];
 }
@@ -177,10 +177,8 @@ static int read_double_quote() {
 
    token_clear();
    while ((c = lex_getc()) != EOF) {
-      if (c == '"') {
-         token_finalize();
-         return LEX_TOKEN_DOUBLE_QUOTE;
-      }
+      if (c == '"')
+         return token_finalize(), LEX_TOKEN_DOUBLE_QUOTE;
       else if (c == '\\') {
          switch ((c = lex_getc())) {
             case 'a':   token_append('\a'); break;
@@ -213,10 +211,8 @@ static int read_single_quote() {
 
    token_clear();
    while ((c = lex_getc()) != EOF) {
-      if (c == '\'') {
-         token_finalize();
-         return LEX_TOKEN_SINGLE_QUOTE;
-      }
+      if (c == '\'')
+         return token_finalize(), LEX_TOKEN_SINGLE_QUOTE;
       else if (c == '\\' && lex_peekc() == '\'')
          token_append(lex_getc());
       else
@@ -230,10 +226,9 @@ static int read_single_quote() {
 static void consume_comment() {
    int c;
 
-   while ((c = lex_getc()) != EOF) {
+   while ((c = lex_getc()) != EOF)
       if (c == '\n')
          break;
-   }
 }
 
 static int read_word() {

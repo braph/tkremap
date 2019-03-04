@@ -41,10 +41,8 @@ _get_command(command_t **arr, int size, const char *name) {
 
    while (size--)
       if (strprefix(arr[size]->name, name)) {
-         if (cmd) {
-            write_error("%s: %s", E_AMBIGIOUS_CMD, name);
-            return NULL;
-         }
+         if (cmd)
+            return write_error("%s: %s", E_AMBIGIOUS_CMD, name), NULL;
          else
             cmd = arr[size];
       }

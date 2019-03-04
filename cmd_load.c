@@ -74,7 +74,6 @@ const command_t command_load = {
             " - $HOME/.config/" CFG_DIR_NAME "\n"
             " - $HOME/." CFG_DIR_NAME,
    .args  = (const char*[]) { "FILE", 0 },
-   .opts  = NULL,
    .call  = &call,
    .parse = &parse,
    .free  = &free

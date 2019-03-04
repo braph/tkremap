@@ -156,10 +156,8 @@ int main(int argc, char *argv[]) {
 
 char* alias(const char *template, ...) {
    static char* buf = 0;
-   if (! template) {
-      free(buf);
-      return 0;
-   }
+   if (! template)
+      return free(buf), NULL;
 
    int sz = strlen(template);
    va_list ap;
@@ -194,9 +192,8 @@ void sighandler(int sig) {
 }
 
 void tmux_fix() {
-   if (getenv("TMUX") && fork() == 0) {
-      close(0); close(1); close(2);
+   if (getenv("TMUX") && fork() == 0)
+      close(0), close(1), close(2),
       execlp("tmux", "tmux", "setw", "escape-time", "50", NULL);
-   }
 }
 

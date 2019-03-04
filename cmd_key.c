@@ -27,10 +27,8 @@ static COMMAND_PARSE_FUNC(parse) {
 
    for (option *opt = options; opt->opt; ++opt) {
       if (opt->opt == 'r')
-         if ((repeat = atoi(opt->arg)) <= 0) {
-            write_error("%s: %s", strerror(EINVAL), opt->arg);
-            return NULL;
-         }
+         if ((repeat = atoi(opt->arg)) <= 0)
+            return write_error("%s: %s", strerror(EINVAL), opt->arg), NULL;
    }
 
    for (int i = 0; i < argc; ++i) {

@@ -89,10 +89,8 @@ END:
 int read_conf_string(const char *str) {
    FILE *fh = fmemopen((void*) str, strlen(str), "r");
 
-   if (! fh) {
-      write_error("%s", strerror(errno));
-      return 0;
-   }
+   if (! fh)
+      return write_error("%s", strerror(errno)), 0;
 
    int ret = read_conf_stream(fh);
    fclose(fh);
@@ -102,10 +100,8 @@ int read_conf_string(const char *str) {
 int read_conf_file(const char *file) {
    FILE *fh = fopen(file, "r");
 
-   if (! fh) {
-      write_error("%s", strerror(errno));
-      return 0;
-   }
+   if (! fh)
+      return write_error("%s", strerror(errno)), 0;
 
    int ret = read_conf_stream(fh);
    fclose(fh);
