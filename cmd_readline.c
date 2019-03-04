@@ -184,7 +184,6 @@ const command_t command_readline = {
       "(1) The program's window content is refreshed by resizing its PTY.\n"
       "You may use *-R* in conjunction with *-k* to send a key (e.g. *C-l*) for refreshing\n"
       "the screen instead (this may be more appropriate).",
-   .args  = NULL,
    .opts  = (const command_opt_t[]) {
       {'p', "PROMPT", "Set prompt text"},
       {'i', "INIT",   "Set pre fill buffer with text"},

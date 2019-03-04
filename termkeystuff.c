@@ -204,21 +204,18 @@ int parse_key(const char *def, TermKeyKey *key) {
    if (last_char != NULL && *last_char == 0)
       return 1;
 
-   // Caret notation ^K/^k
-   if (def[0] == '^' && def[1] != 0 && def[2] == 0) {
-      // Try ^K
-      last_char = termkey_strpkey(tk, def, key, TERMKEY_FORMAT_CARETCTRL);
+   // Try ^K
+   last_char = termkey_strpkey(tk, def, key, TERMKEY_FORMAT_CARETCTRL);
+   if (last_char != NULL && *last_char == 0)
+      return 1;
+
+   // Try ^k (lower char)
+   if (def[0] == '^' && def[1] >= 'a' && def[1] <= 'z' && def[2] == 0) {
+      char def2[3] = { '^', 0, 0 };
+      def2[1] = toupper(def[1]);
+      last_char = termkey_strpkey(tk, def2, key, TERMKEY_FORMAT_CARETCTRL);
       if (last_char != NULL && *last_char == 0)
          return 1;
-
-      // Try ^k
-      if (def[1] >= 'a' && def[1] <= 'z') {
-         char def2[3] = { '^', 0, 0 };
-         def2[1] = toupper(def[1]);
-         last_char = termkey_strpkey(tk, def2, key, TERMKEY_FORMAT_CARETCTRL);
-         if (last_char != NULL && *last_char == 0)
-            return 1;
-      }
    }
 
    write_error("%s: %s", E_INVALID_KEY, def);
@@ -247,162 +244,10 @@ char get_byte_for_mod(int modifiers) {
 
 const char *get_key_code(TermKeyKey *key) {
    static char buf[8];
+   char mod, c;
 
-   if (key->type == TERMKEY_TYPE_KEYSYM) {
-      if (key->modifiers == 0)
-         return get_sequence_for_sym(normal_lookup, normal_lookup_size, key->code.sym);
-
-      char c;
-      #define case break; case
-      switch ((int) key->code.sym) {
-         case TERMKEY_SYM_INSERT:    c = '2';
-         case TERMKEY_SYM_DELETE:    c = '3';
-         case TERMKEY_SYM_PAGEUP:    c = '5';
-         case TERMKEY_SYM_PAGEDOWN:  c = '6';
-         
-         case TERMKEY_SYM_UP:        c = 'A';
-         case TERMKEY_SYM_DOWN:      c = 'B';
-         case TERMKEY_SYM_RIGHT:     c = 'C';
-         case TERMKEY_SYM_LEFT:      c = 'D';
-         case TERMKEY_SYM_END:       c = 'F';
-         case TERMKEY_SYM_HOME:      c = 'H';
-
-         break;
-         default: return NULL;
-      }
-      #undef case
-
-      char mod = get_byte_for_mod(key->modifiers);
-
-      buf[0] = 27;
-      buf[1] = 91;
-      if (c <= '6') {
-         buf[2] = c;
-         buf[3] = 59;
-         buf[4] = mod;
-         buf[5] = 126;
-      }
-      else {
-         buf[2] = 49;
-         buf[3] = 59;
-         buf[4] = mod;
-         buf[5] = c;
-      }
-      buf[6] = 0;
-
-      /*   A-Insert: 27  91  50  59  51 126
-       *   A-Delete: 27  91  51  59  51 126
-       *   A-PageUp: 27  91  53  59  51 126
-       * A-PageDown: 27  91  54  59  51 126
-       *
-       *       A-Up: 27  91  49  59  51  65
-       *     A-Down: 27  91  49  59  51  66
-       *    A-Right: 27  91  49  59  51  67
-       *     A-Left: 27  91  49  59  51  68
-       *      A-End: 27  91  49  59  51  70
-       *     A-Home: 27  91  49  59  51  72 */
-   }
-   else if (key->type == TERMKEY_TYPE_FUNCTION) {
-      int n = key->code.number;
-
-      if (n > 12)
-         return NULL;
-
-      buf[0] = 27;
-
-      if (key->modifiers == 0) {
-         /*   F1:  27  79  80  0  0
-          *   F2:  27  79  81  0  0
-          *   F3:  27  79  82  0  0
-          *   F4:  27  79  83  0  0
-          *   F5:  27  91  49  53 126
-          *   F6:  27  91  49  55 126
-          *   F7:  27  91  49  56 126
-          *   F8:  27  91  49  57 126
-          *   F9:  27  91  50  48 126
-          *  F10:  27  91  50  49 126
-          *  F11:  27  91  50  51 126
-          *  F12:  27  91  50  52 126   */
-
-         if (n <= 4) {
-            buf[1] = 79;
-            buf[2] = 80 + n - 1;
-            buf[3] = 0;
-         }
-         else {
-            buf[1] = 91;
-            if (n <= 8) {
-               buf[2] = 49;
-               buf[3] = (char[]){ 53, 55, 56, 57 }[n - 5];
-            } else {
-               buf[2] = 50;
-               buf[3] = (char[]){ 48, 49, 51, 52 }[n - 9];
-            }
-            buf[4] = 126;
-            buf[5] = 0;
-         }
-      }
-      else {
-         char mod = get_byte_for_mod(key->modifiers);
-
-         /*     S-F1:  27  91  49  59  50  80   0
-          *     S-F2:  27  91  49  59  50  81   0
-          *     S-F3:  27  91  49  59  50  82   0
-          *     S-F4:  27  91  49  59  50  83   0
-          *     S-F5:  27  91  49  53  59  50 126
-          *     S-F6:  27  91  49  55  59  50 126
-          *     S-F7:  27  91  49  56  59  50 126
-          *     S-F8:  27  91  49  57  59  50 126
-          *     S-F9:  27  91  50  48  59  50 126
-          *    S-F10:  27  91  50  49  59  50 126
-          *    S-F11:  27  91  50  51  59  50 126
-          *    S-F12:  27  91  50  52  59  50 126 */
-
-         /*     C-F1:  27  91  49  59  53  80   0 
-          *     C-F2:  27  91  49  59  53  81   0 
-          *     C-F3:  27  91  49  59  53  82   0 
-          *     C-F4:  27  91  49  59  53  83   0 
-          *     C-F5:  27  91  49  53  59  53 126 
-          *     C-F6:  27  91  49  55  59  53 126 
-          *     C-F7:  27  91  49  56  59  53 126 
-          *     C-F8:  27  91  49  57  59  53 126 
-          *     C-F9:  27  91  50  48  59  53 126 
-          *    C-F10:  27  91  50  49  59  53 126 
-          *    C-F11:  27  91  50  51  59  53 126 
-          *    C-F12:  27  91  50  52  59  53 126 */
-
-         /*   C-S-F1:  27  91  49  59  54  80   0
-          *   C-S-F2:  27  91  49  59  54  81   0
-          *   C-S-F3:  27  91  49  59  54  82   0
-          *   C-S-F4:  27  91  49  59  54  83   0
-          *   C-S-F5:  27  91  49  53  59  54 126
-          *   C-S-F6:  27  91  49  55  59  54 126
-          *   C-S-F7:  27  91  49  56  59  54 126
-          *   C-S-F8:  27  91  49  57  59  54 126
-          *   C-S-F9:  27  91  50  48  59  54 126
-          *  C-S-F10:  27  91  50  49  59  54 126
-          *  C-S-F11:  27  91  50  51  59  54 126
-          *  C-S-F12:  27  91  50  52  59  54 126 */
-
-         buf[1] = 91;
-         buf[2] = (n <= 8 ? 49 : 50);
-         buf[3] = (char[]) { 59, 59, 59, 59, 53, 55, 56, 57, 48, 49, 51, 52 } [n - 1];
-
-         if (n <= 4) {
-            buf[4] = mod;
-            buf[5] = 80 + n - 1;
-            buf[6] = 0;
-         }
-         else {
-            buf[4] = 59;
-            buf[5] = mod;
-            buf[6] = 126;
-            buf[7] = 0;
-         }
-      }
-   }
-   else if (key->type == TERMKEY_TYPE_UNICODE) {
-      char c = key->code.codepoint;
+   if (key->type == TERMKEY_TYPE_UNICODE) {
+      c = key->code.codepoint;
 
       if (key->modifiers & TERMKEY_KEYMOD_CTRL)
          c -= 0x60;
@@ -416,7 +261,90 @@ const char *get_key_code(TermKeyKey *key) {
          buf[0] = c;
          buf[1] = 0;
       }
+      return buf;
+   }
+   else if (key->type == TERMKEY_TYPE_KEYSYM) {
+      if (key->modifiers == 0)
+         return get_sequence_for_sym(normal_lookup, normal_lookup_size, key->code.sym);
+
+      #define case break; case
+      switch ((int) key->code.sym) {
+         case TERMKEY_SYM_INSERT:    c = '2';
+         case TERMKEY_SYM_DELETE:    c = '3';
+         case TERMKEY_SYM_PAGEUP:    c = '5';
+         case TERMKEY_SYM_PAGEDOWN:  c = '6';
+         
+         case TERMKEY_SYM_UP:        c = 'A';
+         case TERMKEY_SYM_DOWN:      c = 'B';
+         case TERMKEY_SYM_RIGHT:     c = 'C';
+         case TERMKEY_SYM_LEFT:      c = 'D';
+         case TERMKEY_SYM_END:       c = 'F';
+         case TERMKEY_SYM_HOME:      c = 'H';
+         break; default: return NULL;
+      }
+      #undef case
+
+      mod = get_byte_for_mod(key->modifiers);
+      buf[0] = 27;
+      buf[1] = 91;
+      buf[2] = (c <= '6' ? c   : 49);
+      buf[3] = 59;
+      buf[4] = mod;
+      buf[5] = (c <= '6' ? 126 : c);
+      buf[6] = 0;
+      return buf;
+   }
+   else if (key->type == TERMKEY_TYPE_FUNCTION) {
+      int n = key->code.number;
+      if (n > 12)
+         return NULL;
+
+      buf[0] = 27;
+      if (key->modifiers == 0) {
+         #if ______B0___B1___B2___B3___B4___B5
+           F1-F4:  27   79   79+N 0    0    0
+          F5-F12:  27   91   X1   X2   126  0
+         #endif
+
+         if (n <= 4) { // F1-F4
+            buf[1] = 79;
+            buf[2] = 79 + n;
+            buf[3] = 0;
+         }
+         else {        // F5-F12
+            buf[1] = 91;
+            buf[2] = (n <= 8 ? 49 : 50); // X1
+            buf[3] = (char[]){ 53, 55, 56, 57,48, 49, 51, 52 }[n - 5]; // X2
+            buf[4] = 126;
+            buf[5] = 0;
+         }
+         return buf;
+      }
+      else {
+         #if __________B0___B1___B2___B3___B4___B5___B6
+          (M)  F1-F4:  27   91   X1   59   MOD  79+N 0
+          (M) F5-F12:  27   91   X1   X2   59   MOD  126
+         #endif
+
+         mod = get_byte_for_mod(key->modifiers);
+         buf[1] = 91;
+         buf[2] = (n <= 8 ? 49 : 50); // X1
+         buf[3] = (char[]) { 59, 59, 59, 59, 53, 55, 56, 57, 48, 49, 51, 52 } [n - 1]; // X2
+
+         if (n <= 4) { // F1 - F4
+            buf[4] = mod;
+            buf[5] = 79 + n;
+            buf[6] = 0;
+         }
+         else {        // F5 - F12
+            buf[4] = 59;
+            buf[5] = mod;
+            buf[6] = 126;
+            buf[7] = 0;
+         }
+         return buf;
+      }
    }
 
-   return buf;
+   return NULL;
 }

@@ -12,7 +12,7 @@
 #include <sys/wait.h>
 
 #define USAGE \
-"Usage: *%s* [_OPTIONS_] PROGRAM [ARGUMENTS...]\n\n"             \
+"Usage: *%s* [_OPTIONS_] PROGRAM [_ARGUMENTS_...]\n\n"             \
 "_OPTIONS_\n\n"                                                  \
 " *-C* _STRING_\t"        "Read config string\n"                 \
 " *-c* _FILE_\t"          "Read config file (see -h load)\n"     \
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
       errx(1, "%s: command", E_MISSING_ARG);
 
    if (forkapp(&argv[optind], &context.program_fd, &context.program_pid) < 0)
-      err(1, "Could not start process");
+      err(1, "Could not start process: %s", argv[optind]);
 
    if (! start_program_output())
       err(1, "Starting thread failed");

@@ -2,6 +2,8 @@
 
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
+#include <error.h>
 
 static FILE         *lex_in;
 static int           lex_is_eof;
@@ -282,24 +284,16 @@ char *lex_error() {
    if (! lex_error_buf)
       lex_error_buf = malloc(LEX_ERROR_BUF_SZ);
 
-   int n = sprintf(lex_error_buf, "%d:%d: ", lex_line, lex_line_pos);
+   sprintf(lex_error_buf, "%d:%d: ", lex_line, lex_line_pos);
 
-   #define case break; case
    switch (lex_errno) {
    case 0:
-      sprintf(lex_error_buf + n, "all good");
-
+      return strcat(lex_error_buf, strerror(0));
    case LEX_ERROR_MISSING_SINGLE_QUOTE:
-      sprintf(lex_error_buf + n, "unterminated single quote");
-
+      return strcat(lex_error_buf, "unterminated single quote");
    case LEX_ERROR_MISSING_DOUBLE_QUOTE:
-      sprintf(lex_error_buf + n, "unterminated double quote");
-
-   break;
+      return strcat(lex_error_buf, "unterminated double quote");
    default:
-      sprintf(lex_error_buf + n, "error in lexer");
+      return strcat(lex_error_buf, "error in lexer");
    }
-   #undef case
-
-   return lex_error_buf;
 }
