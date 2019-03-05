@@ -22,27 +22,27 @@ extern struct context_t context;
 
 // === Command stuff ==========================================================
 typedef const struct command_opt_t {
-   const char  opt;
-   const char *meta;
-   const char *desc;
+  const char  opt;
+  const char *meta;
+  const char *desc;
 } command_opt_t;
 
 #define COMMAND_T_INIT \
-   .args = NULL, .opts = NULL, \
-   .call = NULL, .free = NULL, .parse = NULL
+  .args = NULL, .opts = NULL, \
+  .call = NULL, .free = NULL, .parse = NULL
 typedef struct command_t {
-   const char           *name;
-   const char           *desc;
-   const char          **args;
-   const command_opt_t  *opts;
-   void*               (*parse) (int, char **, option*);
-   int                 (*call)  (struct command_call_t*, TermKeyKey*);
-   void                (*free)  (void*);
+  const char           *name;
+  const char           *desc;
+  const char          **args;
+  const command_opt_t  *opts;
+  void*               (*parse) (int, char **, option*);
+  int                 (*call)  (struct command_call_t*, TermKeyKey*);
+  void                (*free)  (void*);
 } command_t;
 
 typedef struct command_call_t {
-   command_t  *command;
-   void       *arg;
+  command_t  *command;
+  void       *arg;
 } command_call_t;
 
 #define COMMAND_CALL_FUNC(NAME)  int   NAME(struct command_call_t* cmd, TermKeyKey *key)
@@ -52,23 +52,23 @@ typedef struct command_call_t {
 #define BINDING_TYPE_COMMAND 0
 #define BINDING_TYPE_CHAINED 1
 typedef struct binding_t {
-   uint16_t  type :  1;
-   uint16_t  size : 15;
-   union {
-      struct command_call_t *commands;
-      struct binding_t     **bindings;
-   } p;
+  uint16_t  type :  1;
+  uint16_t  size : 15;
+  union {
+    struct command_call_t *commands;
+    struct binding_t     **bindings;
+  } p;
 
-   TermKeyKey  key; // at the bottom, important!
+  TermKeyKey  key; // at the bottom, important!
 } binding_t;
 
 typedef struct binding_root_t {
-   uint16_t  type :  1;
-   uint16_t  size : 15;
-   union {
-      struct command_call_t *commands;
-      struct binding_t     **bindings;
-   } p;
+  uint16_t  type :  1;
+  uint16_t  size : 15;
+  union {
+    struct command_call_t *commands;
+    struct binding_t     **bindings;
+  } p;
 } binding_root_t;
 
 void       binding_free(binding_t *);
@@ -79,10 +79,10 @@ void       binding_del_binding(binding_t *, TermKeyKey*);
 
 
 typedef struct keymode_t {
-   char       *name;
-   uint8_t     repeat_enabled;
-   binding_t  *unbound[4];
-   binding_t  *root;
+  char       *name;
+  uint8_t     repeat_enabled;
+  binding_t  *unbound[4];
+  binding_t  *root;
 } keymode_t;
 
 void  keymode_init(keymode_t*, const char*);
@@ -135,8 +135,8 @@ void  update_pty_size(int);
 int   forkapp(char **, int *, pid_t *);
 
 typedef struct command_args_t {
-   int         argc;
-   char      **args;
+  int         argc;
+  char      **args;
 } command_args_t;
 
 void* copyargs(int, char *[], option*);
