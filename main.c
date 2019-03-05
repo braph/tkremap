@@ -181,7 +181,7 @@ void cleanup() {
   context_free();
   unload_terminfo();
   stop_program_output();
-  free_error();
+  error_free();
 #endif
   exit(0);
 }

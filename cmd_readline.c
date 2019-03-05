@@ -4,21 +4,22 @@
 #include "options.h"
 
 #include <stdio.h>
-#include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
-#include <signal.h>
 #include <unistd.h>
 
 #include <pty.h>
 #include <termios.h>
 #include <readline/readline.h>
 
-typedef struct cmd_readline_args {
-  uint8_t  no_newline : 1;
-  uint8_t  no_clear   : 1;
-  uint8_t  no_refresh : 1;
-  uint8_t  __PAD__    : 5;
+int read_conf_string(const char *); // conf.h
+
+typedef struct cmd_readline_args { // cmd_readline.c + cmd_command.c
+  uint8_t  do_newline : 1;
+  uint8_t  do_clear   : 1;
+  uint8_t  do_refresh : 1;
+  uint8_t  do_config  : 1;
+  uint8_t  __PAD__    : 4;
   int16_t x;
   int16_t y;
   char  *prompt;
@@ -58,7 +59,7 @@ void refresh_window(int fd) {
   }
 }
 
-static COMMAND_CALL_FUNC(call) {
+COMMAND_CALL_FUNC(cmd_readline_call) {
   int old_x, old_y, max_x = 0, max_y = 0, x, y;
   char *line;
   cmd_readline_args *args = cmd->arg;
@@ -96,7 +97,7 @@ static COMMAND_CALL_FUNC(call) {
 
   set_cursor(STDOUT_FILENO, y, x);
 
-  if (! args->no_clear)
+  if (args->do_clear)
     write(STDOUT_FILENO, "\033[K", 3);
 
   line = readline(args->prompt);
@@ -106,17 +107,30 @@ static COMMAND_CALL_FUNC(call) {
   set_cursor(STDOUT_FILENO, old_y, old_x);
 
   if (line && strlen(line) > 0) {
-    if (args->prepend)
-      writes_to_program(args->prepend);
-    writes_to_program(line);
-    if (args->append)
-      writes_to_program(args->append);
-    if (! args->no_newline)
-      write(context.program_fd, "\r", 1);
+    if (args->do_config) {
+      if (! read_conf_string(line)) {
+        // if config is invalid redisplay prompt
+        char *old_init = args->init;
+        args->init = line;
+        cmd_readline_call(cmd, key);
+        args->init = old_init;
+        free(line);
+        return 1;
+      }
+    }
+    else {
+      if (args->prepend)
+        writes_to_program(args->prepend);
+      writes_to_program(line);
+      if (args->append)
+        writes_to_program(args->append);
+      if (args->do_newline)
+        write(context.program_fd, "\r", 1);
+    }
     free(line);
   }
 
-  if (! args->no_refresh)
+  if (args->do_refresh)
     refresh_window(context.program_fd);
   if (args->keyseq)
     writes_to_program(args->keyseq);
@@ -124,39 +138,40 @@ static COMMAND_CALL_FUNC(call) {
   return 1;
 }
 
-static void cmd_readline_free(void *);
-static COMMAND_PARSE_FUNC(parse) {
+void cmd_readline_free(void *);
+COMMAND_PARSE_FUNC(cmd_readline_parse) {
   cmd_readline_args *cmd_args = calloc(1, sizeof(*cmd_args));
   cmd_args->x = 1;
   cmd_args->y = -1;
 
   for (option *opt = options; opt->opt; ++opt) {
-#define case break; case
+    #define case break; case
     switch (opt->opt) {
-      case 'n': cmd_args->no_newline = 1;
-      case 'C': cmd_args->no_clear   = 1;
-      case 'R': cmd_args->no_refresh = 1;
+      case 'n': cmd_args->do_newline = 1;
+      case 'c': cmd_args->do_clear   = 1;
+      case 'r': cmd_args->do_refresh = 1;
+      case 'C': cmd_args->do_config  = 1;
       case 'p': cmd_args->prompt     = strdup(opt->arg);
       case 'i': cmd_args->init       = strdup(opt->arg);
       case 'A': cmd_args->append     = strdup(opt->arg);
       case 'P': cmd_args->prepend    = strdup(opt->arg);
       case 'k':
-                if (! (cmd_args->keyseq = (char*) key_parse_get_code(opt->arg)))
-                  goto ERROR;
+          if (! (cmd_args->keyseq = (char*) key_parse_get_code(opt->arg)))
+            goto ERROR;
 
-                cmd_args->keyseq = strdup(cmd_args->keyseq);
+          cmd_args->keyseq = strdup(cmd_args->keyseq);
       case 'x':
-                if (! (cmd_args->x = atoi(opt->arg))) {
-                  error_write("%s: %s", strerror(EINVAL), opt->arg);
-                  goto ERROR;
-                }
+          if (! (cmd_args->x = atoi(opt->arg))) {
+            error_write("%s: %s", strerror(EINVAL), opt->arg);
+            goto ERROR;
+          }
       case 'y':
-                if (! (cmd_args->y = atoi(opt->arg))) {
-                  error_write("%s: %s", strerror(EINVAL), opt->arg);
-                  goto ERROR;
-                }
+          if (! (cmd_args->y = atoi(opt->arg))) {
+            error_write("%s: %s", strerror(EINVAL), opt->arg);
+            goto ERROR;
+          }
     }
-#undef case
+    #undef case
   }
 
   return (void*) cmd_args;
@@ -166,7 +181,6 @@ ERROR:
   return NULL;
 }
 
-static
 void cmd_readline_free(void *_arg) {
   cmd_readline_args *arg = (cmd_readline_args*) _arg;
   free(arg->init);
@@ -181,24 +195,25 @@ const command_t command_readline = {
   .name  = "readline",
   .desc  = 
     "Write to program using readline\n\n"
-    "(1) The program's window content is refreshed by resizing its PTY.\n"
-    "You may use *-R* in conjunction with *-k* to send a key (e.g. *C-l*) for refreshing\n"
+    "(*1*) The program's window content is refreshed by resizing its PTY.\n"
+    "You may also try the *-k* option to send a key (e.g. *C-l*) for refreshing\n"
     "the screen instead (this may be more appropriate).",
   .opts  = (const command_opt_t[]) {
     {'p', "PROMPT", "Set prompt text"},
-    {'i', "INIT",   "Set pre fill buffer with text"},
+    {'i', "INIT",   "Pre fill buffer with text"},
     {'x', "X",      "Set x cursor position (starting from left - use negative value to count from right)"},
     {'y', "Y",      "Set y cursor position (starting from top - use negative value to count from bottom)"},
-    {'n', NULL,     "Do not write a tralining newline"},
+    {'n', NULL,     "Append a newline to result string"},
     {'k', "KEY",    "Send _KEY_ after writing line"},
-    {'C', NULL,     "Do not clear the cursor line"},
-    {'R', NULL,     "Do not refresh the window (1)"},
+    {'c', NULL,     "Clear the cursor line"},
+    {'r', NULL,     "Refresh the window (*1*)"},
     {'P', "TEXT",   "Prepend _TEXT_ to result"},
     {'A', "TEXT",   "Append _TEXT_ to result"},
+    {'C', NULL,     "Evaluate result as config instead of sending it to program"},
     {0,0,0}
   },
-  .parse = &parse,
-  .call  = &call,
+  .parse = &cmd_readline_parse,
+  .call  = &cmd_readline_call,
   .free  = &cmd_readline_free
 };
 

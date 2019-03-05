@@ -12,6 +12,7 @@ const char *VI_CONF =
 "bi C-c mo default \\; mo control_c;"
 "bi Escape mo default \\; mo escape;"
 "rep on;"
+"bi : command;"
 "bi h ke Left;"
 "bi j ke Down;"
 "bi k ke Up;"

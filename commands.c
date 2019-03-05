@@ -15,6 +15,7 @@ extern command_t command_mask;
 extern command_t command_load;
 extern command_t command_key;
 extern command_t command_ignore;
+extern command_t command_command;
 extern command_t command_bind;
 
 command_t* commands[] = {
@@ -31,6 +32,7 @@ command_t* commands[] = {
   &command_load,
   &command_key,
   &command_ignore,
+  &command_command,
   &command_bind
 };
 int commands_size = (sizeof(commands)/sizeof(commands[0]));
