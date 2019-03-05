@@ -1,6 +1,5 @@
 #include "tkremap.h"
 #include "common.h"
-#include "errormsg.h"
 #include "termkeystuff.h"
 
 #include <pty.h>
@@ -11,43 +10,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-struct context_t   context;
-
-static char* tkremap_error = NULL;
-#define      TKREMAP_ERROR_MAX 2048
-
-// Return the current error
-char *get_error() {
-   return tkremap_error;
-}
-
-// Start a new error
-void write_error(const char *fmt, ...) {
-   char temp[TKREMAP_ERROR_MAX];
-
-   va_list ap;
-   va_start(ap, fmt);
-   vsnprintf(temp, TKREMAP_ERROR_MAX, fmt, ap);
-   va_end(ap);
-
-   free(tkremap_error);
-   tkremap_error = strdup(temp);
-}
-
-// Append error message to an existing error separated by ": "
-void prepend_error(const char *fmt, ...) {
-   char *old_error = tkremap_error;
-   char temp[TKREMAP_ERROR_MAX];
-
-   va_list ap;
-   va_start(ap, fmt);
-   int l = vsnprintf(temp, TKREMAP_ERROR_MAX, fmt, ap);
-   va_end(ap);
-
-   tkremap_error = malloc(sizeof(": ") + strlen(old_error) + l);
-   sprintf(tkremap_error, "%s: %s", temp, old_error);
-   free(old_error);
-}
+struct context_t context;
 
 void writeb_to_program(const char *s, ssize_t len) {
    ssize_t n;
@@ -87,11 +50,11 @@ void context_init() {
 #if FREE_MEMORY
 void context_free() {
    keymode_free(&context.global_mode);
+   keymode_free(&context.default_mode);
 
-   for (int i = context.n_keymodes; i--; ) {
-      keymode_free(context.keymodes[i]);
-      free(context.keymodes[i]);
-   }
+   for (int i = context.n_keymodes; i--; )
+      keymode_free(context.keymodes[i]),
+         free(context.keymodes[i]);
 
    free(context.keymodes);
 }

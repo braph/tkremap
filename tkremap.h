@@ -9,6 +9,7 @@
 #include <sys/types.h>
 
 #include "options.h"
+#include "errormsg.h"
 #include "termkeystuff.h"
 
 struct context_t;
@@ -18,10 +19,6 @@ struct command_call_t;
 // === Global variables ===
 extern struct context_t context;
 // ========================
-
-char* get_error();
-void  write_error(const char *fmt, ...);
-void  prepend_error(const char *fmt, ...);
 
 // === Command stuff ==========================================================
 typedef const struct command_opt_t {

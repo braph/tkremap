@@ -181,7 +181,7 @@ void cleanup() {
    context_free();
    unload_terminfo();
    stop_program_output();
-   pthread_join(context.redir_thread, NULL);
+   free_error();
 #endif
    exit(0);
 }

@@ -170,10 +170,13 @@ int load_terminfo()
    return 1;
 }
 
+#if FREE_MEMORY
 void unload_terminfo() {
+   del_curterm(cur_term);
    free(normal_lookup);
    free(shift_lookup);
 }
+#endif
 
 TermKeyKey* parse_key_new(const char *def) {
    TermKeyKey *key = malloc(sizeof(*key));
