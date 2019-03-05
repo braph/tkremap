@@ -44,7 +44,7 @@ int read_conf_stream(FILE *fh) {
 
    while ((nargs = lex_args(&args)) != EOF) {
       if (nargs == LEX_ERROR) {
-         write_error("%s", lex_error());
+         error_write("%s", lex_error());
          ret = 0;
          goto END;
       }
@@ -53,13 +53,13 @@ int read_conf_stream(FILE *fh) {
          continue;
 
       if (! (command = get_command(args[0]))) {
-         prepend_error("%d:%d", lex_line, lex_line_pos);
+         error_add("%d:%d", lex_line, lex_line_pos);
          ret = 0;
          goto END;
       }
 
       if (! (cmdarg = command_parse(command, nargs - 1, &args[1]))) {
-         prepend_error("%d:%d: %s", lex_line, lex_line_pos, command->name);
+         error_add("%d:%d: %s", lex_line, lex_line_pos, command->name);
          ret = 0;
          goto END;
       }
@@ -90,7 +90,7 @@ int read_conf_string(const char *str) {
    FILE *fh = fmemopen((void*) str, strlen(str), "r");
 
    if (! fh)
-      return write_error("%s", strerror(errno)), 0;
+      return error_write("%s", strerror(errno)), 0;
 
    int ret = read_conf_stream(fh);
    fclose(fh);
@@ -101,7 +101,7 @@ int read_conf_file(const char *file) {
    FILE *fh = fopen(file, "r");
 
    if (! fh)
-      return write_error("%s", strerror(errno)), 0;
+      return error_write("%s", strerror(errno)), 0;
 
    int ret = read_conf_stream(fh);
    fclose(fh);

@@ -52,7 +52,7 @@ static COMMAND_PARSE_FUNC(parse) {
    int number;
 
    if (! (number = name2signal(args[0])))
-      write_error("%s: %s", strerror(EINVAL), args[0]);
+      error_write("%s: %s", strerror(EINVAL), args[0]);
 
    return (void*) (uintptr_t) number; // is NULL if failed
 }

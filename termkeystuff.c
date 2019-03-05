@@ -219,7 +219,7 @@ int parse_key(const char *def, TermKeyKey *key) {
          return 1;
    }
 
-   return write_error("%s: %s", E_INVALID_KEY, def), 0;
+   return error_write("%s: %s", E_INVALID_KEY, def), 0;
 }
 
 const char *format_key(TermKeyKey *key) {

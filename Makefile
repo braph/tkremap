@@ -2,18 +2,18 @@ PROGNAME   = tkremap
 LIBS 		  = -lutil -ltermkey -lcurses -lpthread -lreadline
 PREFIX     = /usr
 STRIP      = strip
-CC_FLAGS   = -Wall
+CFLAGS   = -Wall
 
 ifeq ($(DEBUG), 1)
-	CC_FLAGS += -g -DFREE_MEMORY=1 -DDEBUG=1
+	CFLAGS += -g -DFREE_MEMORY=1 -DDEBUG=1
 	STRIP     = true
 else
-	CC_FLAGS += -O3
+	CFLAGS += -O3
 endif
 
 ifeq ($(README), 1)
-CC_FLAGS += -DBOLD='"**"' -DBOLD_END='"**"' -DITALIC='"_"' -DITALIC_END='"_"'
-CC_FLAGS += -DREADME
+CFLAGS += -DBOLD='"**"' -DBOLD_END='"**"' -DITALIC='"_"' -DITALIC_END='"_"'
+CFLAGS += -DREADME
 endif
 
 CMDS = bind unbind unbound core key load readline signal write
@@ -23,12 +23,12 @@ OBJS  = $(CMDS) termkeystuff bind_parse tkremap conf lexer options commands help
 OBJS := $(addsuffix .o, $(OBJS))
 
 build: $(OBJS)
-	$(CC) $(CC_FLAGS) $(LIBS) objs/*.o main.c -o $(PROGNAME)
+	$(CC) $(CFLAGS) $(LIBS) objs/*.o main.c -o $(PROGNAME)
 	$(STRIP) $(PROGNAME)
 
 %.o:
 	@mkdir -p objs
-	$(CC) $(CC_FLAGS) $(LIBS) -c $*.c -o objs/$*.o
+	$(CC) $(CFLAGS) $(LIBS) -c $*.c -o objs/$*.o
 
 install:
 	install -m 0755 $(PROGNAME) $(PREFIX)/bin/$(PROGNAME)

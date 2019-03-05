@@ -31,23 +31,23 @@ static COMMAND_CALL_FUNC(cmd_bind_call) {
       }
       else {
          if (binding_next->type == BINDING_TYPE_COMMAND)
-            return write_error("Overwriting key binding"), 0; // TODO
+            return error_write("Overwriting key binding"), 0; // TODO
 
          binding = binding_next;
       }
    }
 
    if (binding == context.current_mode->root)
-      return write_error("%s: %s", E_MISSING_ARG, "KEY"), 0;
+      return error_write("%s: %s", E_MISSING_ARG, "KEY"), 0;
 
    if (binding->type == BINDING_TYPE_COMMAND)
-      return write_error("Overwriting key binding"), 0;
+      return error_write("Overwriting key binding"), 0;
 
    if (binding->type == BINDING_TYPE_CHAINED && binding->size > 0)
-      return write_error("Overwriting key binding"), 0;
+      return error_write("Overwriting key binding"), 0;
 
    if (argc == 0)
-      return write_error("%s: %s", E_MISSING_ARG, "COMMAND"), 0;
+      return error_write("%s: %s", E_MISSING_ARG, "COMMAND"), 0;
 
    binding->type = BINDING_TYPE_COMMAND;
    return binding_append_commands(binding, argc, args);

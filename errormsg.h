@@ -8,10 +8,10 @@ extern const char * const E_INVALID_KEY;
 extern const char * const E_KEYCODE_NA;
 extern const char * const E_AMBIGIOUS_CMD;
 
-char* get_error();
-void  write_error(const char *fmt, ...);
-void  prepend_error(const char *fmt, ...);
-void  free_error();
+char* error_get();
+void  error_write(const char *fmt, ...);
+void  error_add(const char *fmt, ...);
+void  error_free();
 
 #endif
 

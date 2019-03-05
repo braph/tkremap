@@ -42,7 +42,7 @@ static COMMAND_CALL_FUNC(cmd_unbound) {
             km->unbound[j] = calloc(1, sizeof(binding_t));
 
          if (! binding_append_commands(km->unbound[j], argc - i, &args[i])) {
-            //write_error("unknown key type/command: %s", args[i]);
+            //error_write("unknown key type/command: %s", args[i]);
             return 0;
          }
       }

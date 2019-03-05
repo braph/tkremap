@@ -14,7 +14,7 @@ int binding_append_command(binding_t *binding, int argc, char *args[])
       return 0;
 
    if (! (arg = command_parse(cmd, argc - 1, &args[1])))
-      return prepend_error("%s", cmd->name), 0;
+      return error_add("%s", cmd->name), 0;
 
    binding->p.commands = realloc(binding->p.commands, ++binding->size * sizeof(command_call_t));
    binding->p.commands[binding->size - 1].command = cmd;

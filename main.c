@@ -59,24 +59,24 @@ int main(int argc, char *argv[]) {
             ERR(": unknown mode: %s", optarg);
       case 'c':
          if (! load_conf(optarg))
-            ERR(" '%s': %s", optarg, get_error());
+            ERR(" '%s': %s", optarg, error_get());
       case 'C': 
          if (! read_conf_string(optarg))
-            ERR(" '%s': %s", optarg, get_error());
+            ERR(" '%s': %s", optarg, error_get());
       case 'b':
          if (! read_conf_string(alias("bind %s", optarg)))
-            ERR(" '%s': %s", optarg, get_error());
+            ERR(" '%s': %s", optarg, error_get());
       case 'u':
          if (! read_conf_string(alias("unbind %s", optarg)))
-            ERR(" '%s': %s", optarg, get_error());
+            ERR(" '%s': %s", optarg, error_get());
       case 'k':
          if ((arg2 = argv[optind++]) == NULL)
             ERR(" '%s': %s", optarg, E_MISSING_ARG);
          if (! read_conf_string(alias("bind %s key %s", optarg, arg2)))
-            ERR(" '%s' '%s': %s", optarg, arg2, get_error());
+            ERR(" '%s' '%s': %s", optarg, arg2, error_get());
       case 'v':
          if (! read_conf_string(VI_CONF))
-            ERR(": %s", get_error());
+            ERR(": %s", error_get());
       case '?':
          return 1;
       }

@@ -25,7 +25,7 @@ int parse_options(int argc, char *args[], const char *optstr, option **opts) {
             goto RETURN;
          else {
             // treat --long-options as unknown option
-            write_error("%s: %s", E_UNKNOWN_OPT, args[i]);
+            error_write("%s: %s", E_UNKNOWN_OPT, args[i]);
             goto ERROR;
          }
       }
@@ -33,7 +33,7 @@ int parse_options(int argc, char *args[], const char *optstr, option **opts) {
       c = &args[i][1];
       do {
          if (! (oc = strchr(optstr, *c))) {
-            write_error("%s: %c\n", E_UNKNOWN_OPT, *c);
+            error_write("%s: %c\n", E_UNKNOWN_OPT, *c);
             goto ERROR;
          }
 
@@ -50,7 +50,7 @@ int parse_options(int argc, char *args[], const char *optstr, option **opts) {
                break;
             }
             else {
-               write_error("%s: %c\n", E_MISSING_ARG, *c);
+               error_write("%s: %c\n", E_MISSING_ARG, *c);
                goto ERROR;
             }
          }

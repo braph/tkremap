@@ -147,12 +147,12 @@ static COMMAND_PARSE_FUNC(parse) {
          cmd_args->keyseq = strdup(cmd_args->keyseq);
       case 'x':
          if (! (cmd_args->x = atoi(opt->arg))) {
-            write_error("%s: %s", strerror(EINVAL), opt->arg);
+            error_write("%s: %s", strerror(EINVAL), opt->arg);
             goto ERROR;
          }
       case 'y':
          if (! (cmd_args->y = atoi(opt->arg))) {
-            write_error("%s: %s", strerror(EINVAL), opt->arg);
+            error_write("%s: %s", strerror(EINVAL), opt->arg);
             goto ERROR;
          }
       }

@@ -84,7 +84,7 @@ static COMMAND_PARSE_FUNC(cmd_repeat_parse) {
    else if (streq(args[0], "off"))
       return (void*) (uintptr_t) REPEAT_OFF;
    else {
-      write_error("%s: '%s' {on|off}", strerror(EINVAL), args[0]);
+      error_write("%s: '%s' {on|off}", strerror(EINVAL), args[0]);
       return NULL;
    }
 }

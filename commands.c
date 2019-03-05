@@ -41,13 +41,13 @@ command_t* get_command(const char *name) {
    for (int i = commands_size; i--; )
       if (strprefix(commands[i]->name, name)) {
          if (cmd)
-            return write_error("%s: %s", E_AMBIGIOUS_CMD, name), NULL;
+            return error_write("%s: %s", E_AMBIGIOUS_CMD, name), NULL;
          else
             cmd = commands[i];
       }
 
    if (! cmd)
-      write_error("%s: %s", E_UNKNOWN_CMD, name);
+      error_write("%s: %s", E_UNKNOWN_CMD, name);
 
    return cmd;
 }
@@ -72,7 +72,7 @@ void* command_parse(command_t *cmd, int argc, char **args) {
 
    if (cmd->args == NULL) {
       if (argc > 0) {
-         write_error("spare arguments");
+         error_write("spare arguments");
          goto ERROR_OR_END;
       }
    }

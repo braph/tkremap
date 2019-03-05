@@ -19,7 +19,7 @@ int load_conf_at(const char *dir, const char *f) {
    if (! access(f, F_OK))
       ret = read_conf_file(f);
    else
-      write_error("%s: %s", strerror(ENOENT), f);
+      error_write("%s: %s", strerror(ENOENT), f);
 
    if (chdir(oldcwd))
       warn("chdir(%s)", oldcwd);

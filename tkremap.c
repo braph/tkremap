@@ -190,7 +190,7 @@ int check_args(int argc, const char *args[]) {
    for (const char **arg = args; *arg; ++arg) {
       if (**arg == '+') {
          if (! argc)
-            return write_error("%s: %s", E_MISSING_ARG, (*arg+1)), 0;
+            return error_write("%s: %s", E_MISSING_ARG, (*arg+1)), 0;
 
          break; // OK
       }
@@ -199,7 +199,7 @@ int check_args(int argc, const char *args[]) {
       }
       else {
          if (! argc--)
-            return write_error("%s: %s", E_MISSING_ARG, *arg), 0;
+            return error_write("%s: %s", E_MISSING_ARG, *arg), 0;
       }
    }
 
@@ -208,7 +208,7 @@ int check_args(int argc, const char *args[]) {
 
 char* args_get_arg(int *argc, char ***argv, const char *name) {
    if (! *argc)
-      return write_error("%s: %s", E_MISSING_ARG, name), NULL;
+      return error_write("%s: %s", E_MISSING_ARG, name), NULL;
 
    char *ret = (*argv)[0];
    return --(*argc), ++(*argv), ret;
@@ -444,7 +444,7 @@ const char *key_parse_get_code(const char *keydef) {
       return 0;
 
    if (! (seq = get_key_code(&key)))
-      write_error("%s: %s", E_KEYCODE_NA, keydef);
+      error_write("%s: %s", E_KEYCODE_NA, keydef);
 
    return seq; // is NULL if failed
 }
