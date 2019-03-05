@@ -33,18 +33,11 @@ void writes_to_program(const char *s) {
 }
 
 void context_init() {
-   context.keymodes        = NULL;
-   context.n_keymodes      = 0;
-   context.mask            = 0;
-   context.repeat          = 0;
-   context.stack_index     = 0;
-   context.input_len       = 0;
-   context.current_binding = NULL;
-   context.current_mode    = &context.default_mode;
-   for (int i = 0; i < MODESTACK_SIZE; ++i)
-      context.modestack[i] = &context.default_mode;
    keymode_init(&context.global_mode,  "global");
    keymode_init(&context.default_mode, "default");
+   context.current_mode = &context.default_mode;
+   for (int i = 0; i < MODESTACK_SIZE; ++i)
+      context.modestack[i] = &context.default_mode;
 }
 
 #if FREE_MEMORY
