@@ -35,26 +35,21 @@ command_t* commands[] = {
 };
 int commands_size = (sizeof(commands)/sizeof(commands[0]));
 
-command_t*
-_get_command(command_t **arr, int size, const char *name) {
+command_t* get_command(const char *name) {
    command_t *cmd = NULL;
 
-   while (size--)
-      if (strprefix(arr[size]->name, name)) {
+   for (int i = commands_size; i--; )
+      if (strprefix(commands[i]->name, name)) {
          if (cmd)
             return write_error("%s: %s", E_AMBIGIOUS_CMD, name), NULL;
          else
-            cmd = arr[size];
+            cmd = commands[i];
       }
 
    if (! cmd)
       write_error("%s: %s", E_UNKNOWN_CMD, name);
 
    return cmd;
-}
-
-command_t* get_command(const char *name) {
-   return _get_command(commands, commands_size, name);
 }
 
 void* command_parse(command_t *cmd, int argc, char **args) {

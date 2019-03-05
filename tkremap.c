@@ -373,9 +373,8 @@ void *redirect_to_stdout(void *_fd)
             usleep(100);
             continue;
          }
-         else {
+         else
             return NULL;
-         }
       }
 
       b = buffer;
@@ -462,10 +461,8 @@ int forkapp(char **argv, int *ptyfd, pid_t *pid) {
 
    if (*pid < 0)
       return -1;
-   else if (*pid == 0) {
-      execvp(argv[0], &argv[0]);
-      return -1;
-   }
+   else if (*pid == 0)
+      return execvp(argv[0], &argv[0]);
 
    return 1;
 }

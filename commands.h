@@ -9,6 +9,5 @@ extern int        commands_size;
 
 void*      command_parse(command_t *, int, char **);
 command_t* get_command(const char *);
-command_t* _get_command(command_t **, int, const char *);
 
 #endif
