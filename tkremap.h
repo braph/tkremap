@@ -2,12 +2,15 @@
 #define _TKREMAP_H
 
 #include <errno.h>
+#include <error.h>
 #include <stdint.h>
 #include <termios.h>
 #include <pthread.h>
 #include <termkey.h>
 #include <sys/types.h>
 
+#include "conf.h"
+#include "common.h"
 #include "options.h"
 #include "errormsg.h"
 #include "termkeystuff.h"

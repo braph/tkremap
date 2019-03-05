@@ -1,3 +1,6 @@
+#ifndef _COMMON_H
+#define _COMMON_H
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -44,3 +47,5 @@ inline __attribute__((always_inline))
     void *dest = malloc(size);
     return memcpy(dest, src, size);
   }
+
+#endif

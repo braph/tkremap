@@ -1,6 +1,4 @@
 #include "tkremap.h"
-#include "errormsg.h"
-#include "common.h"
 
 // bind_parse.c
 int binding_append_commands(binding_t*, int, char *[]);

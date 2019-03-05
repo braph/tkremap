@@ -1,5 +1,4 @@
 #include "tkremap.h"
-#include "common.h"
 
 // === mask ===================================================================
 static COMMAND_CALL_FUNC(cmd_mask) {

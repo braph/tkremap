@@ -1,7 +1,4 @@
 #include "tkremap.h"
-#include "termkeystuff.h"
-#include "common.h"
-#include "options.h"
 
 #include <stdio.h>
 #include <string.h>

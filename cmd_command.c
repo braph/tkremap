@@ -1,9 +1,6 @@
 #define _GNU_SOURCE
 #include <stdio.h>
-
 #include "tkremap.h"
-#include "termkeystuff.h"
-#include "options.h"
 
 typedef struct cmd_readline_args { // cmd_readline.c + cmd_command.c
   uint8_t  do_newline : 1;

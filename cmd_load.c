@@ -1,4 +1,3 @@
-#include "conf.h"
 #include "tkremap.h"
 
 #include <err.h>
