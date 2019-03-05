@@ -58,10 +58,6 @@ void keymode_init(keymode_t *km, const char *name) {
    km->name             = strdup(name);
    km->root             = calloc(1, sizeof(binding_root_t));
    km->root->type       = BINDING_TYPE_CHAINED;
-   km->unbound[0]       =
-      km->unbound[1]    =
-      km->unbound[2]    =
-      km->unbound[3]    = 0;
 }
 
 keymode_t* get_keymode(const char *name) {
