@@ -192,7 +192,9 @@ static char* fill_attrs(const char *s) {
       switch (*s) {
          case '*':   
          case '_':
+#ifndef README
             if (isatty(1))
+#endif
                strcat(r, attrs[(2*(*s%2)) + (state = !state)]);
             break;
          case '\\':  strncat(r, ++s, 1);

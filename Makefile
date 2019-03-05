@@ -13,6 +13,7 @@ endif
 
 ifeq ($(README), 1)
 CC_FLAGS += -DBOLD='"**"' -DBOLD_END='"**"' -DITALIC='"_"' -DITALIC_END='"_"'
+CC_FLAGS += -DREADME
 endif
 
 CMDS = bind unbind unbound core key load readline signal write
@@ -33,11 +34,14 @@ install:
 	install -m 0755 $(PROGNAME) $(PREFIX)/bin/$(PROGNAME)
 
 README.md: .force
-	./$(PROGNAME) -h all | sed 's/$$/  /g' >> README.md
+	sed -n '/^Usage:/q;p' README.md > README.new
+	./$(PROGNAME) -h all | sed 's/^ /\&nbsp;\&nbsp;\&nbsp;\&nbsp;/g; s/$$/  /g' >> README.new
+	mv README.new README.md
 
-doc: .force
-	./tools/genhelp.py > $(PROGNAME).md
-	go-md2man -in $(PROGNAME).md -out $(PROGNAME).1
+$(PROGNAME).1: .force
+	cp README.md $(PROGNAME).1.ronn
+	ronn --roff $(PROGNAME).1.ronn
+	rm -f $(PROGNAME).1.ronn
 
 vi_conf.h: .force
 	./tools/stripconf.py -c -v VI_CONF confs/vi.conf > vi_conf.h
