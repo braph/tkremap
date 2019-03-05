@@ -15,31 +15,31 @@ const char * const E_AMBIGIOUS_CMD = "ambigious command";
 static char* _error_msg;
 
 char *error_get() {
-   return _error_msg;
+  return _error_msg;
 }
 
 void error_write(const char *fmt, ...) {
-   free(_error_msg);
-   va_list ap;
-   va_start(ap, fmt);
-   vasprintf(&_error_msg, fmt, ap);
-   va_end(ap);
+  free(_error_msg);
+  va_list ap;
+  va_start(ap, fmt);
+  vasprintf(&_error_msg, fmt, ap);
+  va_end(ap);
 }
 
 void error_add(const char *fmt, ...) {
-   char *old_error = _error_msg;
-   char *temp;
-   va_list ap;
-   va_start(ap, fmt);
-   vasprintf(&temp, fmt, ap);
-   va_end(ap);
+  char *old_error = _error_msg;
+  char *temp;
+  va_list ap;
+  va_start(ap, fmt);
+  vasprintf(&temp, fmt, ap);
+  va_end(ap);
 
-   asprintf(&_error_msg, "%s: %s", temp, old_error);
-   free(temp);
-   free(old_error);
+  asprintf(&_error_msg, "%s: %s", temp, old_error);
+  free(temp);
+  free(old_error);
 }
 
 void error_free() {
-   free(_error_msg);
-   _error_msg = 0;
+  free(_error_msg);
+  _error_msg = 0;
 }

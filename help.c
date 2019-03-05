@@ -22,28 +22,28 @@
 #endif
 
 #define P(...) \
-   printf(__VA_ARGS__)
+  printf(__VA_ARGS__)
 
 #define PA(FMT, ...) \
-   printf(fill_attrs(FMT), ##__VA_ARGS__)
+  printf(fill_attrs(FMT), ##__VA_ARGS__)
 
 #define ATTRS(...) \
-   fill_attrs(__VA_ARGS__)
+  fill_attrs(__VA_ARGS__)
 
 static char* firstline(const char *s) {
-   return strndup(s, strcspn(s, "\n"));
+  return strndup(s, strcspn(s, "\n"));
 }
 
 static void pad_right(int n) {
-   while (n--)
-      putchar(' ');
+  while (n--)
+    putchar(' ');
 }
 
 static const char *attrs[] = {
-   BOLD,
-   BOLD_END,
-   ITALIC,
-   ITALIC_END
+  BOLD,
+  BOLD_END,
+  ITALIC,
+  ITALIC_END
 };
 
 static void  help_keys();
@@ -55,159 +55,159 @@ static char* fill_attrs(const char *);
 static char* indent(const char *, int);
 
 int help(const char *prog, const char *usage, const char *topic) {
-   command_t *cmd = 0;
+  command_t *cmd = 0;
 
-   if (! topic)
+  if (! topic)
+    PA(usage, prog);
+  else if (streq(topic, "all"))
+    print_all(prog, usage);
+  else if (streq(topic, "keys"))
+    help_keys();
+  else if (strprefix("commands", topic))
+    help_commands(0);
+  else {
+    if ((cmd = get_command(topic)))
+      help_command(cmd, 1);
+    else {
       PA(usage, prog);
-   else if (streq(topic, "all"))
-      print_all(prog, usage);
-   else if (streq(topic, "keys"))
-      help_keys();
-   else if (strprefix("commands", topic))
-      help_commands(0);
-   else {
-      if ((cmd = get_command(topic)))
-         help_command(cmd, 1);
-      else {
-         PA(usage, prog);
-         P("%s: %s", E_UNKNOWN_CMD, topic);
-      }
-   }
+      P("%s: %s", E_UNKNOWN_CMD, topic);
+    }
+  }
 
-   return 0;
+  return 0;
 }
 
 static void print_all(const char *prog, const char *usage) {
-   PA(usage, prog);
-   help_commands(1);
-   help_keys();
+  PA(usage, prog);
+  help_commands(1);
+  help_keys();
 }
 
 static void help_commands(int full) {
-   PA("_Commands_\n\n");
-   for (int i = commands_size; i--; )
-      help_command(commands[i], full);
-   P("\n");
+  PA("_Commands_\n\n");
+  for (int i = commands_size; i--; )
+    help_command(commands[i], full);
+  P("\n");
 }
 
 // Returns [-fb] [-a arg] [-s arg]
 static char* get_option_string(command_t *cmd ) {
-   char opts[128],  *o = opts;
-   char flags[128], *f = flags;
-   char *r = calloc(1, 1024);
+  char opts[128],  *o = opts;
+  char flags[128], *f = flags;
+  char *r = calloc(1, 1024);
 
-   if (cmd->opts) {
-      for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt)
-         if (opt->meta)
-            o += sprintf(o, " [-%c %s]", opt->opt, opt->meta);
-         else
-            *f++ = opt->opt;
-      *f = *o = 0;
+  if (cmd->opts) {
+    for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt)
+      if (opt->meta)
+        o += sprintf(o, " [-%c %s]", opt->opt, opt->meta);
+      else
+        *f++ = opt->opt;
+    *f = *o = 0;
 
-      if (strlen(flags))
-         sprintf(r, "[-%s]", flags);
-      if (strlen(opts))
-         strcat(r, opts + !strlen(flags));
-   }
+    if (strlen(flags))
+      sprintf(r, "[-%s]", flags);
+    if (strlen(opts))
+      strcat(r, opts + !strlen(flags));
+  }
 
-   return r;
+  return r;
 }
 
 static void help_command(command_t *cmd, int full) {
-   if (! full) {
-      PA("*%-15s*", cmd->name);
-      PA(firstline(cmd->desc));
-      PA("\n");
-      return;
-   }
+  if (! full) {
+    PA("*%-15s*", cmd->name);
+    PA(firstline(cmd->desc));
+    PA("\n");
+    return;
+  }
 
-   PA("*%s*", cmd->name);
+  PA("*%s*", cmd->name);
 
-   if (cmd->opts) {
-      P(" ");
-      PA(get_option_string(cmd));
-   }
+  if (cmd->opts) {
+    P(" ");
+    PA(get_option_string(cmd));
+  }
 
-   if (cmd->args) {
-      for (const char **arg = cmd->args; *arg; ++arg)
-         if (**arg == '+')  PA(" _%s_...",    *arg + 1); else
-         if (**arg == '*')  PA(" [_%s_...]",  *arg + 1); else
-                            PA(" _%s_",       *arg);
-   }
+  if (cmd->args) {
+    for (const char **arg = cmd->args; *arg; ++arg)
+      if (**arg == '+')  PA(" _%s_...",    *arg + 1); else
+        if (**arg == '*')  PA(" [_%s_...]",  *arg + 1); else
+          PA(" _%s_",       *arg);
+  }
 
-   P("\n");
-   P(indent(ATTRS(cmd->desc), 1));
-   P("\n");
+  P("\n");
+  P(indent(ATTRS(cmd->desc), 1));
+  P("\n");
 
-   if (cmd->opts) {
-      P("\n");
+  if (cmd->opts) {
+    P("\n");
 
-      int max = 0;
-      for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt)
-         if (opt->meta)
-            max = (strlen(opt->meta) > max ? strlen(opt->meta) : max);
+    int max = 0;
+    for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt)
+      if (opt->meta)
+        max = (strlen(opt->meta) > max ? strlen(opt->meta) : max);
 
-      for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt) {
-         PA(" *-%c*", opt->opt);
+    for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt) {
+      PA(" *-%c*", opt->opt);
 
-         if (opt->meta) {
-            PA(" _%s_", opt->meta);
-            pad_right(3 + max - strlen(opt->meta) - 1);
-         }
-         else
-            pad_right(3 + max);
-
-         PA(opt->desc);
-         P("\n");
+      if (opt->meta) {
+        PA(" _%s_", opt->meta);
+        pad_right(3 + max - strlen(opt->meta) - 1);
       }
-   }
+      else
+        pad_right(3 + max);
 
-   P("\n");
+      PA(opt->desc);
+      P("\n");
+    }
+  }
+
+  P("\n");
 }
 
 static
 char * indent(const char *str, int pad) {
-   int   ind = -1;
-   char *res = calloc(1, strlen(str) * 2);
+  int   ind = -1;
+  char *res = calloc(1, strlen(str) * 2);
 
-   for (int i = pad; i--; )
-      res[++ind] =  ' ';
+  for (int i = pad; i--; )
+    res[++ind] =  ' ';
 
-   do {
-      res[++ind] = *str;
-      if (*str == '\n')
-         for (int i = pad; i--; )
-            res[++ind] = ' ';
-   } while (*++str);
+  do {
+    res[++ind] = *str;
+    if (*str == '\n')
+      for (int i = pad; i--; )
+        res[++ind] = ' ';
+  } while (*++str);
 
-   return res;
+  return res;
 }
 
 // Replace markdown (*_) with attributes
 static char* fill_attrs(const char *s) {
-   int state = 1;
-   char *r = calloc(1, strlen(s) * 2);
+  int state = 1;
+  char *r = calloc(1, strlen(s) * 2);
 
-   do {
-      switch (*s) {
-         case '*':   
-         case '_':
+  do {
+    switch (*s) {
+      case '*':   
+      case '_':
 #ifndef README
-            if (isatty(1))
+        if (isatty(1))
 #endif
-               strcat(r, attrs[(2*(*s%2)) + (state = !state)]);
-            break;
-         case '\\':  strncat(r, ++s, 1);
-            break;
-         default:    strncat(r, s, 1);
-      }
-   } while (*++s);
+          strcat(r, attrs[(2*(*s%2)) + (state = !state)]);
+        break;
+      case '\\':  strncat(r, ++s, 1);
+                  break;
+      default:    strncat(r, s, 1);
+    }
+  } while (*++s);
 
-   return r;
+  return r;
 }
 
 static void help_keys() {
-   PA(
+  PA(
       "_Keys_\n\n"
       " *Symbolic keys*\n"
       "  Up/Down/Left/Right, PageUp/PageDown, Home/End, Insert/Delete,\n"
@@ -220,6 +220,6 @@ static void help_keys() {
       "\n"
       " *Special*\n"
       "\n"
-   );
+    );
 }
 
