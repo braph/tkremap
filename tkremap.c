@@ -36,7 +36,7 @@ void context_init() {
    keymode_init(&context.global_mode,  "global");
    keymode_init(&context.default_mode, "default");
    context.current_mode = &context.default_mode;
-   for (int i = 0; i < MODESTACK_SIZE; ++i)
+   for (int i = MODESTACK_SIZE; i--; )
       context.modestack[i] = &context.default_mode;
 }
 
@@ -55,9 +55,9 @@ void context_free() {
 
 
 void keymode_init(keymode_t *km, const char *name) {
-   km->name             = strdup(name);
-   km->root             = calloc(1, sizeof(binding_root_t));
-   km->root->type       = BINDING_TYPE_CHAINED;
+   km->name       = strdup(name);
+   km->root       = calloc(1, sizeof(binding_root_t));
+   km->root->type = BINDING_TYPE_CHAINED;
 }
 
 keymode_t* get_keymode(const char *name) {
@@ -247,9 +247,9 @@ void handle_key(TermKeyKey *key) {
 
          if (context.current_mode->unbound[keytype])
             commands_execute(context.current_mode->unbound[keytype], key);
-
-         return;
       }
+
+      return;
    }
 
    // Special case: If building command repetition, don't pass 0 as keybinding,

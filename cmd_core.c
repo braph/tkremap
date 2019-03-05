@@ -83,10 +83,8 @@ static COMMAND_PARSE_FUNC(cmd_repeat_parse) {
     return (void*) (uintptr_t) REPEAT_ON;
   else if (streq(args[0], "off"))
     return (void*) (uintptr_t) REPEAT_OFF;
-  else {
-    error_write("%s: '%s' {on|off}", strerror(EINVAL), args[0]);
-    return NULL;
-  }
+  else
+    return error_write("%s: '%s' {on|off}", strerror(EINVAL), args[0]), NULL;
 }
 
 command_t command_repeat = {
