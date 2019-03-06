@@ -8,7 +8,7 @@ static COMMAND_CALL_FUNC(cmd_unbind_call) {
   TermKeyKey tkey;
   binding_t *binding      = context.current_mode->root,
             *binding_next = NULL,
-            *binding_last = NULL,
+            *binding_last = NULL;
 
   for (int i = 0; i < argc; ++i) {
     if (! parse_key(args[i], &tkey))

@@ -21,9 +21,9 @@
 
 #define EXAMPLE_TEXT \
    "tkremap can also be used for macros \n"\
-   "tkremap -b 'Enter write \"set shiftwidth=2\n set tabstop=2\n gg=G:wg\n\""
+   "tkremap -b 'Enter write \"set shiftwidth=2\n set tabstop=2\n gg=G:wg\n\"" \
    "readline -P exec -p 'sh $ '" \
-   "bind ^C ^C ^C ^C ^C signal KILL" \
+   "bind ^C ^C ^C ^C ^C signal KILL" 
 
 #define P(...) \
   printf(__VA_ARGS__)
