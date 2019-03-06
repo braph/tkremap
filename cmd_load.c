@@ -5,7 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#define CFG_DIR_NAME "tkremap"
+#define CFG_DIR_NAME  "tkremap"
+#define CFG_EXTENSION "conf"
 
 static
 int load_conf_at(const char *dir, const char *f) {
@@ -27,29 +28,40 @@ int load_conf_at(const char *dir, const char *f) {
 }
 
 int load_conf(const char *f) {
-  char dir[4096];
+  char dir[8192];
+  char file[4096];
   const char *xdg_home, *home;
 
   if (strchr(f, '/'))
     return read_conf_file(f);
 
-  if (read_conf_file(f))
+  strcpy(file, f);
+
+again:
+  if (read_conf_file(file))
     return 1;
 
   if ((xdg_home = getenv("XDG_CONFIG_HOME"))) {
     sprintf(dir, "%s/%s", xdg_home, CFG_DIR_NAME);
-    if (load_conf_at(dir, f))
+    if (load_conf_at(dir, file))
       return 1;
   }
 
   if ((home = getenv("HOME"))) {
     sprintf(dir, "%s/.config/%s", home, CFG_DIR_NAME);
-    if (load_conf_at(dir, f))
+    if (load_conf_at(dir, file))
       return 1;
 
     sprintf(dir, "%s/.%s", home, CFG_DIR_NAME);
-    if (load_conf_at(dir, f))
+    if (load_conf_at(dir, file))
       return 1;
+  }
+
+  // try $file.CFG_EXTENSION
+  char *dot = strrchr(file, '.');
+  if (dot == NULL || !streq(dot, "." CFG_EXTENSION)) {
+    sprintf(file, "%s." CFG_EXTENSION, f);
+    goto again;
   }
 
   return 0;
@@ -71,7 +83,8 @@ const command_t command_load = {
     " - $PWD\n"
     " - $XDG\\_CONFIG\\_HOME/" CFG_DIR_NAME "\n"
     " - $HOME/.config/" CFG_DIR_NAME "\n"
-    " - $HOME/." CFG_DIR_NAME,
+    " - $HOME/." CFG_DIR_NAME "\n\n"
+    "The extension ." CFG_EXTENSION " will be added if missing",
   .args  = (const char*[]) { "FILE", 0 },
   .call  = &call,
   .parse = &parse,
