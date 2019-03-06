@@ -54,6 +54,8 @@ typedef struct command_call_t {
 // === Bindings ===============================================================
 #define BINDING_TYPE_COMMAND 0
 #define BINDING_TYPE_CHAINED 1
+#define COMMAND_SEPARATOR_SEMICOLON 0
+#define COMMAND_SEPARATOR_AND       1
 typedef struct binding_t {
   uint16_t  type :  1;
   uint16_t  size : 15;

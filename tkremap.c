@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <assert.h>
 
 struct context_t context;
 
@@ -130,8 +131,10 @@ void command_call_free(command_call_t *call) {
 
 void binding_free(binding_t *binding) {
   if (binding->type == BINDING_TYPE_COMMAND) {
-    for (int i = binding->size; i--; )
+    for (int i = binding->size; i--; ) {
       command_call_free(&binding->p.commands[i]);
+      ++i; // uneven index means command separator (';', '&&')
+    }
   }
   else {
     for (int i = binding->size; i--; ) {
@@ -145,13 +148,27 @@ void binding_free(binding_t *binding) {
   binding->size = 0;
 }
 
-void command_execute(command_call_t *cmd, TermKeyKey *key) {
-  cmd->command->call(cmd, key);
+int command_execute(command_call_t *cmd, TermKeyKey *key) {
+  return cmd->command->call(cmd, key);
 }
 
+// TODO: commands_execute <> commands_execute_with_repeat <> binding_execute
 void commands_execute(binding_t *binding, TermKeyKey *key) {
-  for (int i=0; i < binding->size; ++i)
-    command_execute(&binding->p.commands[i], key);
+  int last_return;
+
+  for (int i=0; i < binding->size; ++i) {
+    assert(! (i % 2));
+    last_return = command_execute(&binding->p.commands[i], key);
+
+    // stop execution if command separators is && and command failed
+check_operator:
+    if (++i < binding->size) {
+      if (binding->p.commands[i].command == (command_t*) (uintptr_t) COMMAND_SEPARATOR_AND && !last_return) {
+        ++i; // "next command"
+        goto check_operator;
+      }
+    }
+  }
 }
 
 static
@@ -209,7 +226,7 @@ void* copyargs(int argc, char *args[], option *options) {
   cmdargs->argc           = argc;
   cmdargs->args[argc]     = NULL;
   for (int i = argc; i--; )
-    cmdargs->args[i]     = strdup(args[i]);
+    cmdargs->args[i] = strdup(args[i]);
   return cmdargs;
 }
 
