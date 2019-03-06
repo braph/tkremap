@@ -62,7 +62,7 @@ static COMMAND_CALL_FUNC(cmd_exec_call) {
   else {
     if (! cmd_args->background) {
       int ret;
-      return waitpid(pid, &ret, 0), WEXITSTATUS(ret);
+      return waitpid(pid, &ret, 0), !WEXITSTATUS(ret);
     }
   }
 
