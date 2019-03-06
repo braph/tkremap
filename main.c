@@ -121,13 +121,17 @@ int main(int argc, char *argv[]) {
       poll(fds, 2, -1);
 
       if (fds[1].revents & POLLHUP || fds[1].revents & POLLERR) {
-#define return_val c
+        #define return_val c
         waitpid(context.program_pid, &return_val, 0);
         return WEXITSTATUS(return_val);
       }
 
       if (fds[0].revents & POLLIN)
         break;
+
+      if (waitpid(context.program_pid, &return_val, WNOHANG) > 0) {
+        return WEXITSTATUS(return_val);
+      }
     }
 
     c = getchar();
