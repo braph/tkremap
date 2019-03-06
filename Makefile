@@ -2,7 +2,7 @@ PROGNAME   = tkremap
 LIBS 		  = -lutil -ltermkey -lcurses -lpthread -lreadline
 PREFIX     = /usr
 STRIP      = strip
-CFLAGS   = -Wall
+CFLAGS    += -Wall
 
 ifeq ($(DEBUG), 1)
 	CFLAGS += -g -DFREE_MEMORY=1 -DDEBUG=1
@@ -16,7 +16,7 @@ CFLAGS += -DBOLD='"**"' -DBOLD_END='"**"' -DITALIC='"_"' -DITALIC_END='"_"'
 CFLAGS += -DREADME
 endif
 
-CMDS = bind command unbind unbound core key load readline signal write
+CMDS = bind command exec unbind unbound core key load readline signal write
 CMDS := $(addprefix cmd_, $(CMDS))
 
 OBJS  = $(CMDS) termkeystuff bind_parse tkremap conf lexer options commands help errormsg

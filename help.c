@@ -1,11 +1,9 @@
 /* No memory management here, since help is a dead op */
 
-#include "conf.h"
-#include "common.h"
-#include "unistd.h"
-#include "errormsg.h"
+#include "tkremap.h"
 #include "commands.h"
 
+#include <unistd.h>
 #include <string.h>
 
 #ifndef BOLD
@@ -21,6 +19,12 @@
 #define ITALIC_END  "\033[0m"
 #endif
 
+#define EXAMPLE_TEXT \
+   "tkremap can also be used for macros \n"\
+   "tkremap -b 'Enter write \"set shiftwidth=2\n set tabstop=2\n gg=G:wg\n\""
+   "readline -P exec -p 'sh $ '" \
+   "bind ^C ^C ^C ^C ^C signal KILL" \
+
 #define P(...) \
   printf(__VA_ARGS__)
 
@@ -32,6 +36,14 @@
 
 static char* firstline(const char *s) {
   return strndup(s, strcspn(s, "\n"));
+}
+
+static int has_more_lines(const char *s) {
+  return !!strchr(s, '\n');
+}
+
+static const char* more_lines(const char *s) {
+  return s += strcspn(s, "\n");
 }
 
 static void pad_right(int n) {
@@ -63,7 +75,7 @@ int help(const char *prog, const char *usage, const char *topic) {
     print_all(prog, usage);
   else if (streq(topic, "keys"))
     help_keys();
-  else if (strprefix("commands", topic))
+  else if (streq("commands", topic))
     help_commands(0);
   else {
     if ((cmd = get_command(topic)))
@@ -130,9 +142,12 @@ static void help_command(command_t *cmd, int full) {
 
   if (cmd->args) {
     for (const char **arg = cmd->args; *arg; ++arg)
-      if (**arg == '+')  PA(" _%s_...",    *arg + 1); else
-        if (**arg == '*')  PA(" [_%s_...]",  *arg + 1); else
-          PA(" _%s_",       *arg);
+      if (**arg == '+')
+         PA(" _%s_...",    *arg + 1);
+      else if (**arg == '*')
+         PA(" [_%s_...]",  *arg + 1);
+      else
+         PA(" _%s_",       *arg);
   }
 
   P("\n");
@@ -157,7 +172,9 @@ static void help_command(command_t *cmd, int full) {
       else
         pad_right(3 + max);
 
-      PA(opt->desc);
+      PA(firstline(opt->desc));
+      if (has_more_lines(opt->desc))
+        PA(indent(more_lines(opt->desc), 6 + max));
       P("\n");
     }
   }
@@ -190,8 +207,8 @@ static char* fill_attrs(const char *s) {
 
   do {
     switch (*s) {
-      case '*':   
-      case '_':
+      case '*': // index = 42 % 2
+      case '_': // index = 95 % 2
 #ifndef README
         if (isatty(1))
 #endif

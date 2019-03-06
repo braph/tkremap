@@ -3,11 +3,13 @@
 #include "tkremap.h"
 
 typedef struct cmd_readline_args { // cmd_readline.c + cmd_command.c
-  uint8_t  do_newline : 1;
-  uint8_t  do_clear   : 1;
-  uint8_t  do_refresh : 1;
-  uint8_t  do_config  : 1;
-  uint8_t  __PAD__    : 4;
+  uint8_t do_newline       : 1;
+  uint8_t do_clear         : 1;
+  uint8_t do_refresh       : 1;
+  uint8_t do_config        : 1;
+  uint8_t do_savescreen    : 1;
+  uint8_t is_redisplayed   : 1;
+  uint8_t __PAD__          : 2;
   int16_t x;
   int16_t y;
   char  *prompt;
@@ -18,9 +20,9 @@ typedef struct cmd_readline_args { // cmd_readline.c + cmd_command.c
 } cmd_readline_args;
 
 const command_t command_readline;
-void  cmd_readline_free(void *_arg);
-int   cmd_readline_call(struct command_call_t* cmd, TermKeyKey *key);
-void* cmd_readline_parse(int argc, char *args[], option *options);
+void  cmd_readline_free(void *);
+int   cmd_readline_call(struct command_call_t*, TermKeyKey *);
+void* cmd_readline_parse(int, char *[], option *);
 
 static COMMAND_PARSE_FUNC(cmd_command_parse) {
   cmd_readline_args *cmd_args = cmd_readline_parse(argc, args, options);
@@ -32,9 +34,8 @@ static COMMAND_PARSE_FUNC(cmd_command_parse) {
       asprintf(&cmd_args->prompt, "(mode: %s) %s", context.current_mode->name, old_prompt);
       free(old_prompt);
     }
-    else {
+    else
       asprintf(&cmd_args->prompt, "(mode: %s) ", context.current_mode->name);
-    }
   }
   return (void*) cmd_args;
 }
@@ -42,20 +43,20 @@ static COMMAND_PARSE_FUNC(cmd_command_parse) {
 const command_t command_command = {
   .name  = "command",
   .desc  = 
-    "Read and execute a configuration string\n\n"
-    "See *readline* for a description of options.\n",
+    "Read and execute a tkremap command",
   .opts  = (const command_opt_t[]) {
-    {'p', "PROMPT", "Set prompt text"},
-    {'i', "INIT",   "Pre fill buffer with text"},
-    {'x', "X",      "Set x cursor position (starting from left - use negative value to count from right)"},
-    {'y', "Y",      "Set y cursor position (starting from top - use negative value to count from bottom)"},
-    {'n', NULL,     "Append a newline to result string"},
-    {'k', "KEY",    "Send _KEY_ after writing line"},
-    {'c', NULL,     "Clear the cursor line"},
-    {'r', NULL,     "Refresh the window (*1*)"},
-    {'P', "TEXT",   "Prepend _TEXT_ to result"},
-    {'A', "TEXT",   "Append _TEXT_ to result"},
-    {'C', NULL,     "Evaluate result as config instead of sending it to program"},
+    {'p', "PROMPT", "See *readline*"},
+    {'i', "TEXT",   "See *readline*"},
+    {'x', "X",      "See *readline*"},
+    {'y', "Y",      "See *readline*"},
+  //{'b', NULL,     "See *readline*"},
+    {'n', NULL,     "See *readline*"},
+    {'k', "KEY",    "See *readline*"},
+    {'c', NULL,     "See *readline*"},
+    {'r', NULL,     "See *readline*"},
+    {'s', NULL,     "See *readline*"},
+    {'A', "TEXT",   "See *readline*"},
+    {'P', "TEXT",   "See *readline*"},
     {0,0,0}
   },
   .parse = &cmd_command_parse,
