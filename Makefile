@@ -46,6 +46,10 @@ $(PROGNAME).1: .force
 vi_conf.h: .force
 	./tools/stripconf.py -c -v VI_CONF confs/vi.conf > vi_conf.h
 
+copy_confs_to_home:
+	mkdir -p ~/.config/$(PROGNAME)
+	cp confs/*.conf ~/.config/$(PROGNAME)
+
 clean:
 	rm -f $(PROGNAME)
 	rm -rf objs
