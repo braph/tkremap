@@ -19,6 +19,10 @@
 #define ITALIC_END  "\033[0m"
 #endif
 
+#ifndef README
+#define README 0
+#endif
+
 #if README
 const char * const EXAMPLES = 
   "Reindent a buch of *.c files:\n"
