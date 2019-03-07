@@ -40,7 +40,7 @@ static COMMAND_PARSE_FUNC(parse) {
   return (void*) cmd_args;
 }
 
-const command_t command_write = {
+command_t command_write = {
   .name  = "write",
   .desc  = "Send string to program",
   .args  = (const char*[]) { "+STRING", 0 },

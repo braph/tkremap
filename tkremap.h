@@ -55,7 +55,8 @@ typedef struct commands_t {
   command_call_t *commands;
 } commands_t;
 
-void commands_free(commands_t *commands);
+void commands_free(commands_t *);
+void command_call_free(command_call_t *);
 
 #define COMMAND_CALL_FUNC(NAME)  int   NAME(struct command_call_t* cmd, TermKeyKey *key)
 #define COMMAND_PARSE_FUNC(NAME) void* NAME(int argc, char *args[], option *options)

@@ -19,7 +19,7 @@ typedef struct cmd_readline_args { // cmd_readline.c + cmd_command.c
   char  *append;
 } cmd_readline_args;
 
-const command_t command_readline;
+command_t command_readline;
 void  cmd_readline_free(void *);
 int   cmd_readline_call(struct command_call_t*, TermKeyKey *);
 void* cmd_readline_parse(int, char *[], option *);
@@ -40,7 +40,7 @@ static COMMAND_PARSE_FUNC(cmd_command_parse) {
   return (void*) cmd_args;
 }
 
-const command_t command_command = {
+command_t command_command = {
   .name  = "command",
   .desc  = 
     "Read and execute a tkremap command",

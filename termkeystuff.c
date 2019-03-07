@@ -137,12 +137,12 @@ int load_terminfo()
     if (strcmp(name + 4, "mouse") == 0)
       continue;
 
-    const char *value = tigetstr(strnames[i]);
-    if (value == 0)
-      continue;
-
     if(funcname2keysym(name + 4, &sym)) {
       if(sym == TERMKEY_SYM_NONE)
+        continue;
+
+      const char *value = tigetstr(strnames[i]);
+      if (value == 0)
         continue;
 
       normal_lookup[normal_lookup_size].sym = sym;
@@ -151,6 +151,10 @@ int load_terminfo()
     }
     else if (funcname2keysym(name + 5, &sym)) {
       if(sym == TERMKEY_SYM_NONE)
+        continue;
+
+      const char *value = tigetstr(strnames[i]);
+      if (value == 0)
         continue;
 
       shift_lookup[shift_lookup_size].sym = sym;
@@ -178,6 +182,7 @@ void unload_terminfo() {
 }
 #endif
 
+#if 0
 TermKeyKey* parse_key_new(const char *def) {
   TermKeyKey *key = malloc(sizeof(*key));
 
@@ -186,6 +191,7 @@ TermKeyKey* parse_key_new(const char *def) {
 
   return key;
 }
+#endif
 
 int parse_key(const char *def, TermKeyKey *key) {
   const char *last_char;

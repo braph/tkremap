@@ -19,7 +19,7 @@ endif
 CMDS = bind command exec unbind unbound core key load readline signal write
 CMDS := $(addprefix cmd_, $(CMDS))
 
-OBJS  = $(CMDS) termkeystuff bind_parse tkremap conf lexer options commands help errormsg
+OBJS  = $(CMDS) termkeystuff tkremap conf common lexer options commands help errormsg
 OBJS := $(addsuffix .o, $(OBJS))
 
 build: $(OBJS)

@@ -5,7 +5,7 @@ static COMMAND_CALL_FUNC(cmd_mask) {
   return (context.mask = 1);
 }
 
-const command_t command_mask = {
+command_t command_mask = {
   COMMAND_T_INIT,
   .name  = "mask",
   .desc  = "Do not interprete the next keypress as a keybinding",
@@ -17,7 +17,7 @@ static COMMAND_CALL_FUNC(cmd_pass) {
   return writeb_to_program(context.input_buffer, context.input_len), 1;
 }
 
-const command_t command_pass = {
+command_t command_pass = {
   COMMAND_T_INIT,
   .name  = "pass",
   .desc  = "Send the pressed key to the program",
@@ -29,7 +29,7 @@ static COMMAND_CALL_FUNC(cmd_ignore) {
   return 1;
 }
 
-const command_t command_ignore = {
+command_t command_ignore = {
   COMMAND_T_INIT,
   .name  = "ignore",
   .desc  = "Completely ignore the current pressed key",
@@ -59,7 +59,7 @@ static COMMAND_PARSE_FUNC(cmd_mode_parse) {
   return (void*) km;
 }
 
-const command_t command_mode = {
+command_t command_mode = {
   COMMAND_T_INIT,
   .name  = "mode",
   .desc  = "Switch to _MODE_\n\nPass *-p* for previous mode",
@@ -107,7 +107,7 @@ static COMMAND_CALL_FUNC(cmd_rehandle) {
   return 1;
 }
 
-const command_t command_rehandle = {
+command_t command_rehandle = {
   COMMAND_T_INIT,
   .name  = "rehandle",
   .desc  = "Rehandle the current key",

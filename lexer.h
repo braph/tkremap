@@ -3,8 +3,6 @@
 
 #include <stdio.h>
 
-#define LEX_ERROR                        -2
-
 #define LEX_TOKEN_DOUBLE_QUOTE           10
 #define LEX_ERROR_MISSING_DOUBLE_QUOTE  -10
 
@@ -28,13 +26,15 @@ typedef struct lexer_t {
   char       buf[LEX_BUF_SZ];
   int        buf_pos;
 
+  #define    LEX_ERROR_BUF_SZ 1024
   int        error_num;
-  char      *error_buf;
+  char       error_buf[LEX_ERROR_BUF_SZ];
 } lexer_t;
 
 extern  lexer_t       *_current_lex;
 #define lex_line      (_current_lex->line)
 #define lex_line_pos  (_current_lex->line_pos)
+#define lex_error_num (_current_lex->error_num)
 
 int   lex_init(FILE *);
 void  lex_destroy();

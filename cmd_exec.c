@@ -70,13 +70,7 @@ static COMMAND_CALL_FUNC(cmd_exec_call) {
 }
 
 static COMMAND_PARSE_FUNC(cmd_exec_parse) {
-  cmd_exec_args cmd_args = {
-    .use_shell  = 0,
-    .background = 0,
-    .in         = NULL,
-    .out        = NULL,
-    .err        = NULL
-  };
+  cmd_exec_args *cmd_args = calloc(1, sizeof(cmd_args));
 
   for (option *opt = options; opt->opt; ++opt) {
     #define case break; case
@@ -84,26 +78,22 @@ static COMMAND_PARSE_FUNC(cmd_exec_parse) {
       case 's':
         if (argc > 1)
           return error_write("Only one argument allowed with -s"), NULL;
-        cmd_args.use_shell = 1;
+        cmd_args->use_shell = 1;
 
       case 'o':
-        cmd_args.out = strdup(opt->arg);
+        cmd_args->out = strdup(opt->arg);
 
       case 'e':
-        cmd_args.err = strdup(opt->arg);
+        cmd_args->err = strdup(opt->arg);
 
       case 'i':
-        cmd_args.in  = strdup(opt->arg);
+        cmd_args->in  = strdup(opt->arg);
     }
     #undef case
   }
 
-  cmd_args.args = malloc((argc + 1) * sizeof(char*));
-  cmd_args.args[argc] = NULL;
-  for (int i = argc; i--; )
-    cmd_args.args[i] = strdup(args[i]);
-
-  return MEMDUP(&cmd_args);
+  cmd_args->args = charsdup(argc, args);
+  return cmd_args;
 }
 
 static void cmd_exec_free(void *_arg) {

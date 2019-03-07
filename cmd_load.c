@@ -75,7 +75,7 @@ static COMMAND_PARSE_FUNC(parse) {
   return (void*) strdup(args[0]);
 }
 
-const command_t command_load = {
+command_t command_load = {
   .name  = "load",
   .desc  = "Load configuration file\n"
     "If file is a sole filename it will be\n"

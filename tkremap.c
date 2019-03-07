@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <assert.h>
 
 struct context_t context;
 
@@ -108,14 +107,13 @@ void keymode_free(keymode_t *km) {
         free(km->unbound[i]);
 
   binding_free(km->root);
-  free(km->root);
   free(km->name);
 }
 #endif
 
 
 void command_call_free(command_call_t *call) {
-  if (call->command->free)
+  if (call->command->free != NULL)
     call->command->free(call->arg);
 }
 
@@ -136,11 +134,9 @@ void binding_free(binding_t *binding) {
 
   for (int i = binding->size; i--; ) {
     binding_free(binding->bindings[i]);
-    free(binding->bindings[i]);
   }
 
-  binding->bindings = NULL;
-  binding->size = 0;
+  free(binding);
 }
 
 int command_execute(command_call_t *cmd, TermKeyKey *key) {
@@ -219,16 +215,19 @@ char* args_get_arg(int *argc, char ***argv, const char *name) {
     return error_write("%s: %s", E_MISSING_ARG, name), NULL;
 
   char *ret = (*argv)[0];
-  return --(*argc), ++(*argv), ret;
+  --(*argc), ++(*argv);
+  return ret;
 }
 
 void* copyargs(int argc, char *args[], option *options) {
   command_args_t *cmdargs = malloc(sizeof(command_args_t));
-  cmdargs->args           = malloc((argc + 1) * sizeof(char*));
-  cmdargs->argc           = argc;
-  cmdargs->args[argc]     = NULL;
-  for (int i = argc; i--; )
-    cmdargs->args[i] = strdup(args[i]);
+
+  if (cmdargs) {
+    cmdargs->argc = argc;
+    if (! (cmdargs->args = charsdup(argc, args)))
+      return free(cmdargs), NULL;
+  }
+
   return cmdargs;
 }
 
@@ -241,7 +240,6 @@ void unpackargs(int *argc, char ***args, option** options, command_args_t* cmdar
 void deleteargs(void *_args) {
   command_args_t *args = (command_args_t*) _args;
   freeArray(args->args, args->argc);
-  free(args);
 }
 
 void handle_key(TermKeyKey *key) {
@@ -459,4 +457,3 @@ const char *key_parse_get_code(const char *keydef) {
 
   return seq; // is NULL if failed
 }
-

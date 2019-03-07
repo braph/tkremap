@@ -21,7 +21,7 @@ int parse_options(int argc, char *args[], const char *optstr, option **opts) {
     if (args[i][1] == 0)      // argument "-"
       goto RETURN;
     if (args[i][1] == '-') { 
-      if (args[i][2] == '0') // end of options "--"
+      if (args[i][2] == '0')  // end of options "--"
         goto RETURN;
       else {
         // treat --long-options as unknown option
@@ -37,7 +37,7 @@ int parse_options(int argc, char *args[], const char *optstr, option **opts) {
         goto ERROR;
       }
 
-      *opts = realloc(*opts, (1 + ++opti) * sizeof(option));
+      *opts = realloc(*opts, (2 + ++opti) * sizeof(option));
       (*opts)[opti].opt = *c;
 
       if (*(oc+1) == ':') {  // needs argument
@@ -59,8 +59,10 @@ int parse_options(int argc, char *args[], const char *optstr, option **opts) {
   }
 
 RETURN:
-  *opts = realloc(*opts, (1 + ++opti) * sizeof(option));
-  (*opts)[opti].opt = 0;
+  if (opti == -1)
+    *opts = calloc(1, sizeof(option));
+  else
+    (*opts)[++opti].opt = 0;
   return i;
 
 ERROR:

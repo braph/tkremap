@@ -215,7 +215,7 @@ void cmd_readline_free(void *_arg) {
   free(arg);
 }
 
-const command_t command_readline = {
+command_t command_readline = {
   .name  = "readline",
   .desc  = 
     "Write to program using readline\n\n"

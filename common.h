@@ -7,15 +7,24 @@
 #if DEBUG
 #define debug(FMT, ...) \
   fprintf(stderr, FMT "\n", ##__VA_ARGS__);
+#include <assert.h>
 #else
 #define debug(...)
+#define assert(...)
 #endif
+
+char** charsdup(int argc, char *args[]);
 
 #define streq(a,b) \
   (!strcmp(a,b))
 
 #define strcaseq(a,b) \
   (!strcasecmp(a,b))
+
+inline __attribute__((always_inline))
+  int strprefix(const char *string, const char *prefix) {
+    return (strstr(string, prefix) == string);
+  }
 
 #define freeArray(array, n) \
   do { \
@@ -41,13 +50,9 @@
     printf("]\n"); \
   } while(0)
 
+#if 0
 #define MEMDUP(PTR) \
   memdup(PTR, sizeof(*PTR));
-
-inline __attribute__((always_inline))
-  int strprefix(const char *string, const char *prefix) {
-    return (strstr(string, prefix) == string);
-  }
 
 inline __attribute__((always_inline))
   void* memdup(void *src, int size) {
@@ -56,5 +61,6 @@ inline __attribute__((always_inline))
       memcpy(dest, src, size);
     return dest;
   }
+#endif
 
 #endif

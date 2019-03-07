@@ -8,79 +8,78 @@
 
 #include <string.h>
 
-static int lex_args(char ***args) {
+static int lex_args(char ***args, int *n) {
   int ttype;
-  int n = 0;
-  *args = NULL;
+  int s = *n;
 
-  if (lex_eof())
-    return EOF;
+  while (*n)
+    free((*args)[--(*n)]);
 
-  while ((ttype = lex_lex()) != EOF) {
-    if (ttype == LEX_ERROR)
-      return LEX_ERROR;
-
+  for (;;) {
+    ttype = lex_lex();
     if (ttype == LEX_TOKEN_END)
       break;
 
-    *args = realloc(*args, ++n * sizeof(char*));
-    (*args)[n - 1] = strdup(lex_token());
+    if (ttype == EOF) {
+      if (lex_error_num) {
+        error_write("%s", lex_error());
+        while (*n)
+          free((*args)[--(*n)]);
+        free(*args);
+        *args = NULL;
+        return -1;
+      }
+      break;
+    }
+
+    ++*n;
+    if (*n >= s) {
+      s = *n + 32;
+      *args = realloc(*args, s * sizeof(char*));
+    }
+
+    (*args)[*n - 1] = strdup(lex_token());
   }
 
-  return n;
+  return *n;
 }
 
 int read_conf_stream(FILE *fh) {
-  int         ret = 1;
-  char        **args = NULL;
-  int         nargs;
-
-  void           *cmdarg;
-  command_t      *command;
+  int             ret = 1;
+  int             nargs = 0;
+  char          **args = NULL;
+  command_call_t *cmdcall = malloc(sizeof(command_call_t));
   keymode_t      *mode_restore = context.current_mode;
-  command_call_t cmdcall;
 
   lex_init(fh);
 
-  while ((nargs = lex_args(&args)) != EOF) {
-    if (nargs == LEX_ERROR) {
-      error_write("%s", lex_error());
+  while (! lex_eof()) {
+    int lret = lex_args(&args, &nargs);
+    if (lret == -1) {
       ret = 0;
-      goto END;
+      break;
     }
+    if (lret == 0)
+      break;
 
-    if (nargs == 0)
-      continue;
-
-    if (! (command = get_command(args[0]))) {
+    cmdcall = command_parse(nargs, args, cmdcall);
+    if (! cmdcall) {
       error_add("%d:%d", lex_line, lex_line_pos);
       ret = 0;
-      goto END;
+      break;
     }
 
-    if (! (cmdarg = command_parse(command, nargs - 1, &args[1]))) {
-      error_add("%d:%d: %s", lex_line, lex_line_pos, command->name);
-      ret = 0;
-      goto END;
+    ret = cmdcall->command->call(cmdcall, NULL);
+    command_call_free(cmdcall);
+    if (! ret) {
+      error_add("%d:%d", lex_line, lex_line_pos);
+      break;
     }
-
-    cmdcall.arg     = cmdarg;
-    if (! command->call(&cmdcall, NULL)) {
-      if (command->free)
-        command->free(cmdarg);
-      ret = 0;
-      goto END;
-    }
-    if (command->free)
-      command->free(cmdarg);
-
-    freeArray(args, nargs);
-    args = NULL;
   }
 
-END:
-  if (args)
-    freeArray(args, nargs);
+//END
+  free(cmdcall);
+  freeArray(args, nargs);
   lex_destroy();
   context.current_mode = mode_restore;
   return ret;

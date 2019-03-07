@@ -23,7 +23,6 @@ int lex_init(FILE *in) {
 
 void lex_destroy() {
   free(lex.token_buf);
-  free(lex.error_buf);
   free(_current_lex);
   _current_lex = NULL;
 }
@@ -175,7 +174,7 @@ static int read_double_quote() {
   }
 
   lex.error_num = LEX_ERROR_MISSING_DOUBLE_QUOTE;
-  return LEX_ERROR;
+  return EOF;
 }
 
 static int read_single_quote() {
@@ -192,7 +191,7 @@ static int read_single_quote() {
   }
 
   lex.error_num = LEX_ERROR_MISSING_SINGLE_QUOTE;
-  return LEX_ERROR;
+  return EOF;
 }
 
 static void consume_comment() {
@@ -226,6 +225,9 @@ static int read_word() {
 }
 
 int lex_lex() {
+  if (lex_eof())
+    return EOF;
+
   int c = lex_getc();
 
   switch (c) {
@@ -244,15 +246,11 @@ int lex_lex() {
 }
 
 int lex_eof() {
-  return lex.is_eof;
+  return (lex.is_eof || lex.error_num);
 }
 
-#define LEX_ERROR_BUF_SZ 1024
 char *lex_error() {
-  if (! lex.error_buf)
-    lex.error_buf = malloc(LEX_ERROR_BUF_SZ);
-
-  sprintf(lex.error_buf, "%d:%d: ", lex.line, lex.line_pos);
+  snprintf(lex.error_buf, LEX_ERROR_BUF_SZ, "%d:%d: ", lex.line, lex.line_pos);
 
   switch (lex.error_num) {
     case 0:

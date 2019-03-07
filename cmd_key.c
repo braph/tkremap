@@ -44,7 +44,7 @@ static COMMAND_PARSE_FUNC(parse) {
   return (void*) cmd_args;
 }
 
-const command_t command_key = {
+command_t command_key = {
   .name  = "key",
   .desc  = "Send key to program",
   .args  = (const char*[]) { "+KEY", 0 },

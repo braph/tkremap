@@ -1,12 +1,11 @@
 #include "tkremap.h"
-
-// bind_parse.c
-commands_t* commands_parse(int, char *[]);
+#include "commands.h"
 
 #define UNBOUND_UNICODE  (1 << TERMKEY_TYPE_UNICODE)
 #define UNBOUND_KEYSYM   (1 << TERMKEY_TYPE_KEYSYM)
 #define UNBOUND_FUNCTION (1 << TERMKEY_TYPE_FUNCTION)
 #define UNBOUND_MOUSE    (1 << TERMKEY_TYPE_MOUSE)
+#define UNBOUND_ANY      (UNBOUND_UNICODE|UNBOUND_KEYSYM|UNBOUND_FUNCTION)
 
 static COMMAND_CALL_FUNC(cmd_unbound) {
   int argc;
@@ -15,8 +14,8 @@ static COMMAND_CALL_FUNC(cmd_unbound) {
 
   int i, flags = 0;
   for (i = 0; i < argc; ++i)
-    if (streq(args[i], "all"))
-      flags |= (UNBOUND_UNICODE|UNBOUND_KEYSYM|UNBOUND_FUNCTION);
+    if (streq(args[i], "any"))
+      flags |= UNBOUND_ANY;
     else if (streq(args[i], "char"))
       flags |= UNBOUND_UNICODE;
     else if (streq(args[i], "sym"))
@@ -29,18 +28,19 @@ static COMMAND_CALL_FUNC(cmd_unbound) {
       break;
 
   if (flags == 0)
-    flags = (UNBOUND_UNICODE|UNBOUND_KEYSYM|UNBOUND_FUNCTION);
+    flags = UNBOUND_ANY;
 
   keymode_t *km = context.current_mode;
 
   for (int j = 0; j <= 3; ++j) {
     if (flags & (1 << j)) {
-      if (km->unbound[j])
+      if (km->unbound[j]) {
         commands_free(km->unbound[j]);
+        free(km->unbound[j]);
+      }
       else {
-        km->unbound[j] = commands_parse(argc - i, &args[i]); // TODO check for NULL
-        //error_write("unknown key type/command: %s", args[i]);
-        return 1;
+        km->unbound[j] = commands_parse(argc - i, &args[i]);
+        return !! km->unbound[j];
       }
     }
   }
@@ -58,16 +58,16 @@ command_t command_unbound = {
     " *sym*      symbolic keys or modified key\n"
     " *function* function keys\n"
     " *mouse*    mouse events\n"
-    " *all*      char|sym|function [*default*]\n"
+    " *any*      char|sym|function [*default*]\n"
     "\n"
     "_COMMAND_\n"
     " Most of the time you want to use the following commands:\n\n"
     " *pass*     - for passing the key as is to the program\n"
     " *ignore*   - for completely ignoring the key\n"
-    " *rehandle* - for rehandling the key (in conjunction with preceding *mode* command)"
-    ,.args  = (const char*[]) { "*TYPE", "+COMMAND", 0 },
+    " *rehandle* - for rehandling the key (in conjunction with preceding *mode* command)",
+  .args  = (const char*[]) { "*TYPE", "+COMMAND", 0 },
   .parse = &copyargs,
   .free  = &deleteargs,
-  .call  = &cmd_unbound,
+  .call  = &cmd_unbound
 };
 

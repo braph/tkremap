@@ -56,7 +56,7 @@ static COMMAND_PARSE_FUNC(parse) {
   return (void*) (uintptr_t) number; // is NULL if failed
 }
 
-const command_t command_signal = {
+command_t command_signal = {
   .name  = "signal",
   .desc  = "Send signal to program",
   .args  = (const char *[]) { "SIGNAL", 0 },

@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "tkremap.h"
 #include "errormsg.h"
 #include "vi_conf.h"
@@ -160,20 +161,15 @@ int main(int argc, char *argv[]) {
 
 char* alias(const char *template, ...) {
   static char* buf = 0;
-  if (! template)
-    return free(buf), NULL;
+  free(buf);
+  buf = 0;
 
-  int sz = strlen(template);
-  va_list ap;
-  va_start(ap, template);
-  for (const char *s = strchr(template, '%'); s; s = strchr(s + 1, '%'))
-    sz += strlen(va_arg(ap, char*));
-  va_end(ap);
-
-  buf = realloc(buf, sz);
-  va_start(ap, template);
-  vsprintf(buf, template, ap);
-  va_end(ap);
+  if (template) {
+    va_list ap;
+    va_start(ap, template);
+    vasprintf(&buf, template, ap);
+    va_end(ap);
+  }
 
   return buf;
 }
