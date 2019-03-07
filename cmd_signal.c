@@ -1,12 +1,11 @@
 #include "tkremap.h"
 
-#include <stdint.h>
 #include <string.h>
 #include <signal.h>
 
 static struct {
-  uint8_t     number;
-  char        *name;
+  int   number;
+  char  *name;
 } signals[] = {
   { SIGINT,  "INT"  },
   { SIGHUP,  "HUP"  },
@@ -32,16 +31,16 @@ int name2signal(const char *name) {
   return 0;
 }
 
-/*
-   static
-   char* signal2name(int number) {
-   for (int i = 0; i < SIGNAL_SIZE; ++i)
-   if (signals[i].number == number)
-   return signals[i].name;
+#if 0
+static
+char* signal2name(int number) {
+  for (int i = 0; i < SIGNAL_SIZE; ++i)
+    if (signals[i].number == number)
+      return signals[i].name;
 
-   return NULL;
-   }
-   */
+  return NULL;
+}
+#endif
 
 static COMMAND_CALL_FUNC(call) {
   int sig = (int) (uintptr_t) cmd->arg;

@@ -12,7 +12,7 @@
 #include <sys/wait.h>
 
 #define USAGE \
-  "Usage: *%s* [_OPTIONS_] PROGRAM [_ARGUMENTS_...]\n\n"             \
+  "Usage: *%s* [_OPTIONS_] PROGRAM [_ARGUMENTS_...]\n\n"           \
   "_OPTIONS_\n\n"                                                  \
   " *-C* _STRING_\t"        "Read config string\n"                 \
   " *-c* _FILE_\t"          "Read config file (see -h load)\n"     \
@@ -49,8 +49,8 @@ int main(int argc, char *argv[]) {
     err(1, "Initializing termkey failed");
 
   while ((c = getopt(argc, argv, GETOPT_OPTS)) != -1)
-#define ERR(FMT, ...) errx(1, "Option -%c" FMT, c, __VA_ARGS__)
-#define case break; case
+    #define ERR(FMT, ...) errx(1, "Option -%c" FMT, c, __VA_ARGS__)
+    #define case break; case
     switch (c) {
       case 'h':
         return help(argv[0], USAGE, argv[optind]);
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
       case '?':
         return 1;
     }
-#undef case
+    #undef case
   alias(NULL); // free
 
   if (optind == argc)
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
   signal(SIGWINCH, update_pty_size);
   setbuf(stdin, NULL);
 
-#define ESCDELAY_MS 10
+  #define ESCDELAY_MS 10
   struct pollfd fds[2] = {
     { .fd = STDIN_FILENO,       .events = POLLIN },
     { .fd = context.program_fd, .events = POLLIN }
@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-NON_ESCAPE:
+    NON_ESCAPE:
     termkey_push_bytes(tk, (char*) &c, 1);
     if (termkey_getkey(tk, &key) == TERMKEY_RES_KEY) {
       handle_key(&key);
@@ -181,10 +181,10 @@ char* alias(const char *template, ...) {
 void cleanup() {
   tcsetattr(STDIN_FILENO, TCSANOW, &context.tios_restore);
 #if FREE_MEMORY
+  stop_program_output();
+  unload_terminfo();
   termkey_destroy(tk);
   context_free();
-  unload_terminfo();
-  stop_program_output();
   error_free();
 #endif
   exit(0);

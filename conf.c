@@ -16,7 +16,7 @@ static int lex_args(char ***args) {
   if (lex_eof())
     return EOF;
 
-  while ((ttype = lex()) != EOF) {
+  while ((ttype = lex_lex()) != EOF) {
     if (ttype == LEX_ERROR)
       return LEX_ERROR;
 

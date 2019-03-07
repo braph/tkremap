@@ -71,6 +71,8 @@ const command_t command_mode = {
 // === repeat =================================================================
 #define REPEAT_ON   2
 #define REPEAT_OFF  1
+#define EQ_ON(S)   (S[0]=='o' && S[1]=='n')
+#define EQ_OFF(S)  (S[0]=='o' && S[1]=='f')
 
 static COMMAND_CALL_FUNC(cmd_repeat) {
   context.current_mode->repeat_enabled = ((int) (uintptr_t) cmd->arg) - 1;
@@ -78,9 +80,9 @@ static COMMAND_CALL_FUNC(cmd_repeat) {
 }
 
 static COMMAND_PARSE_FUNC(cmd_repeat_parse) {
-  if (streq(args[0], "on"))
+  if (EQ_ON(args[0]))
     return (void*) (uintptr_t) REPEAT_ON;
-  else if (streq(args[0], "off"))
+  else if (EQ_OFF(args[0]))
     return (void*) (uintptr_t) REPEAT_OFF;
   else
     return error_write("%s: '%s' {on|off}", strerror(EINVAL), args[0]), NULL;

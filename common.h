@@ -4,6 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if DEBUG
+#define debug(FMT, ...) \
+  fprintf(stderr, FMT "\n", ##__VA_ARGS__);
+#else
+#define debug(...)
+#endif
+
 #define streq(a,b) \
   (!strcmp(a,b))
 
@@ -45,7 +52,9 @@ inline __attribute__((always_inline))
 inline __attribute__((always_inline))
   void* memdup(void *src, int size) {
     void *dest = malloc(size);
-    return memcpy(dest, src, size);
+    if (dest)
+      memcpy(dest, src, size);
+    return dest;
   }
 
 #endif

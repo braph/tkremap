@@ -9,9 +9,9 @@
 #include <termios.h>
 #include <readline/readline.h>
 
-#define SMCUP     "\033[?1049h"
-#define RMCUP     "\033[?1049l"
-#define CLEARLINE "\033[K"
+#define SMCUP       "\033[?1049h"
+#define RMCUP       "\033[?1049l"
+#define CLEARLINE   "\033[K"
 #define STRLEN(S) (sizeof(S) - 1)
 
 int read_conf_string(const char *); // conf.h
@@ -22,7 +22,7 @@ typedef struct cmd_readline_args { // cmd_readline.c + cmd_command.c
   uint8_t do_refresh       : 1;
   uint8_t do_config        : 1;
   uint8_t do_savescreen    : 1;
-  uint8_t is_redisplayed   : 1;
+  uint8_t do_confirm       : 1;
   uint8_t __PAD__          : 2;
   int16_t x;
   int16_t y;
@@ -59,9 +59,21 @@ void refresh_window(int fd) {
   }
 }
 
+static int confirm(cmd_readline_args *args) {
+  if (args->prompt)
+    printf(args->prompt);
+
+  for (;;)
+    switch(getchar()) {
+      case 'y': case 'Y': return 1;
+      case 'n': case 'N': return 0;
+    }
+}
+
 COMMAND_CALL_FUNC(cmd_readline_call) {
+  char *line = NULL;
   int old_x, old_y, max_x = 0, max_y = 0, x, y;
-  char *line;
+  int ret = 1;
   cmd_readline_args *args = cmd->arg;
 
   rl_startup_hook = &rl_set_init_text;
@@ -100,7 +112,10 @@ COMMAND_CALL_FUNC(cmd_readline_call) {
   if (args->do_clear)
     write(STDOUT_FILENO, CLEARLINE, STRLEN(CLEARLINE));
 
-  line = readline(args->prompt);
+  if (args->do_confirm)
+    ret = confirm(args);
+  else
+    line = readline(args->prompt);
 
   set_input_mode();
   start_program_output();
@@ -137,7 +152,7 @@ COMMAND_CALL_FUNC(cmd_readline_call) {
   if (args->keyseq)
     writes_to_program(args->keyseq);
 
-  return 1;
+  return ret;
 }
 
 void cmd_readline_free(void *);
@@ -204,9 +219,13 @@ const command_t command_readline = {
   .name  = "readline",
   .desc  = 
     "Write to program using readline\n\n"
-    "(*1*) The program's window content is refreshed by resizing its PTY.\n"
-    "You may also try the *-k* option to send a key (e.g. *C-l*) for refreshing\n"
-    "the screen instead (this may be more appropriate).",
+    "Since this command writes to STDOUT a redraw of the screen may be desired:\n"
+    " *-k*  Redraw the applicaton by sending a key.\n"
+    "       Most applications recognize *C-l* for refreshing the window content. This is the perferred way.\n"
+    " *-r*  Redraw the application by resizing the PTY and sending SIGWINCH.\n"
+    "\n"
+    "There's also the possibility to save and restore the terminal's screen content\n"
+    "using _tput smcup_ and _tput rmcup_ with option *-s*.",
   .opts  = (const command_opt_t[]) {
     {'p', "PROMPT", "Set prompt text"},
     {'i', "TEXT",   "Pre fill buffer with _TEXT_"},
@@ -218,10 +237,10 @@ const command_t command_readline = {
                     "Use 0 for not changing the cursor position."},
   //{'b', NULL,     "Set cursor to the bottom left (alias for -x 1 -y -1)"},
     {'n', NULL,     "Append a newline to result string"},
-    {'k', "KEY",    "Send _KEY_ after writing line"},
     {'c', NULL,     "Clear the cursor line"},
-    {'r', NULL,     "Refresh the window after readline call (*1*)"},
-    {'s', NULL,     "Save the window using smcup/rmcup (see *tput*(1))"},
+    {'k', "KEY",    "Send _KEY_ after writing line"},
+    {'r', NULL,     "Redraw the window by resizing the PTY"},
+    {'s', NULL,     "Save and restore the terminal using smcup/rmcup (see *tput*(1))"},
     {'A', "TEXT",   "Append _TEXT_ to result"},
     {'P', "TEXT",   "Prepend _TEXT_ to result"},
     {0,0,0}

@@ -56,9 +56,8 @@ void context_free() {
 
 
 void keymode_init(keymode_t *km, const char *name) {
-  km->name       = strdup(name);
-  km->root       = calloc(1, sizeof(binding_root_t));
-  km->root->type = BINDING_TYPE_CHAINED;
+  km->name = strdup(name);
+  km->root = calloc(1, sizeof(binding_t));
 }
 
 keymode_t* get_keymode(const char *name) {
@@ -88,8 +87,8 @@ keymode_t* add_keymode(const char *name) {
 binding_t*
 binding_get_binding(binding_t *binding, TermKeyKey *key) {
   for (int i = binding->size; i--; )
-    if (! termkey_keycmp(tk, key, &binding->p.bindings[i]->key))
-      return binding->p.bindings[i];
+    if (! termkey_keycmp(tk, key, &binding->bindings[i]->key))
+      return binding->bindings[i];
 
   return NULL;
 }
@@ -97,26 +96,17 @@ binding_get_binding(binding_t *binding, TermKeyKey *key) {
 binding_t*
 binding_add_binding(binding_t *binding, binding_t *next_binding) {
   binding->size++;
-  binding->p.bindings = realloc(binding->p.bindings, binding->size * sizeof(binding_t*));
-  return (binding->p.bindings[binding->size - 1] = next_binding);
-}
-
-void
-binding_del_binding(binding_t *binding, TermKeyKey *key) {
-  for (int i=0; i < binding->size; ++i)
-    if (! termkey_keycmp(tk, key, &binding->p.bindings[i]->key)) {
-      binding_free(binding->p.bindings[i]);
-      for (++i; i < binding->size; ++i)
-        binding->p.bindings[i - 1] = binding->p.bindings[i];
-      break;
-    }
-
-  binding->size--;
-  binding->p.bindings = realloc(binding->p.bindings, binding->size * sizeof(binding_t*));
+  binding->bindings = realloc(binding->bindings, binding->size * sizeof(binding_t*));
+  return (binding->bindings[binding->size - 1] = next_binding);
 }
 
 #if FREE_MEMORY
 void keymode_free(keymode_t *km) {
+  for (int i = 0; i < 4; ++i)
+    if (km->unbound[i] != NULL)
+      commands_free(km->unbound[i]),
+        free(km->unbound[i]);
+
   binding_free(km->root);
   free(km->root);
   free(km->name);
@@ -129,22 +119,27 @@ void command_call_free(command_call_t *call) {
     call->command->free(call->arg);
 }
 
-void binding_free(binding_t *binding) {
-  if (binding->type == BINDING_TYPE_COMMAND) {
-    for (int i = binding->size; i--; ) {
-      command_call_free(&binding->p.commands[i]);
-      ++i; // uneven index means command separator (';', '&&')
-    }
+void commands_free(commands_t *commands) {
+  for (int i = 0; i < commands->size; ++i) {
+    command_call_free(&commands->commands[i]);
+    ++i; // uneven index means command separator (';', '&&')
   }
-  else {
-    for (int i = binding->size; i--; ) {
-      binding_free(binding->p.bindings[i]);
-      free(binding->p.bindings[i]);
-    }
+}
+
+// completely destroy a binding, including sub bindings
+void binding_free(binding_t *binding) {
+  if (binding->commands != NULL) {
+    commands_free(binding->commands);
+    free(binding->commands);
+    binding->commands = NULL;
   }
 
-  free(binding->p.commands);
-  binding->p.commands = NULL;
+  for (int i = binding->size; i--; ) {
+    binding_free(binding->bindings[i]);
+    free(binding->bindings[i]);
+  }
+
+  binding->bindings = NULL;
   binding->size = 0;
 }
 
@@ -152,44 +147,51 @@ int command_execute(command_call_t *cmd, TermKeyKey *key) {
   return cmd->command->call(cmd, key);
 }
 
-// TODO: commands_execute <> commands_execute_with_repeat <> binding_execute
-void commands_execute(binding_t *binding, TermKeyKey *key) {
+void commands_execute(commands_t *commands, TermKeyKey *key) {
   int last_return;
 
-  for (int i=0; i < binding->size; ++i) {
+  for (int i=0; i < commands->size; ++i) {
     assert(! (i % 2));
-    last_return = command_execute(&binding->p.commands[i], key);
+    last_return = command_execute(&commands->commands[i], key);
 
     // stop execution if command separators is && and command failed
-check_operator:
-    if (++i < binding->size) {
-      if (binding->p.commands[i].command == (command_t*) (uintptr_t) COMMAND_SEPARATOR_AND && !last_return) {
+check_command_separator:
+    if (++i < commands->size) {
+      if (commands->commands[i].command == (command_t*) (uintptr_t) COMMAND_SEPARATOR_AND && !last_return) {
         ++i; // "next command"
-        goto check_operator;
+        goto check_command_separator;
       }
     }
   }
 }
 
 static
-void commands_execute_with_repeat(binding_t *binding, keymode_t *km, TermKeyKey *key) {
+void commands_execute_with_repeat(commands_t *commands, keymode_t *km, TermKeyKey *key) {
   if (km->repeat_enabled && context.repeat) {
     for (int r = context.repeat; r--; )
-      commands_execute(binding, key);
+      commands_execute(commands, key);
     context.repeat = 0;
   }
   else
-    commands_execute(binding, key);
+    commands_execute(commands, key);
 }
 
 static
 void binding_execute(binding_t *binding, keymode_t *km, TermKeyKey *key) {
-  if (binding->type == BINDING_TYPE_COMMAND) {
-    commands_execute_with_repeat(binding, km, key);
+  //debug("binding_execute(..., %s, %s)", km->name, format_key(&binding->key));
+  if (binding->commands != NULL) {
+    //debug("executing commands");
+    commands_execute_with_repeat(binding->commands, km, key);
+  }
+
+  if (binding->size > 0) {
+    //debug("chain has more bindings");
+    context.current_binding = binding;
+  }
+  else {
+    //debug("chain has NO more bindings");
     context.current_binding = NULL;
   }
-  else
-    context.current_binding = binding;
 }
 
 int check_args(int argc, const char *args[]) {
@@ -243,6 +245,7 @@ void deleteargs(void *_args) {
 }
 
 void handle_key(TermKeyKey *key) {
+  debug("handle_key(%s)", format_key(key));
   binding_t *binding;
 
   // Masked mode =============================================================
@@ -253,9 +256,11 @@ void handle_key(TermKeyKey *key) {
 
   // We're in a keybinding-chain =============================================
   if (context.current_binding != NULL) {
+    //debug("context.current_binding->key = %s", format_key(&context.current_binding->key));
     if ((binding = binding_get_binding(context.current_binding, key)))
       binding_execute(binding, context.current_mode, key);
     else {
+      //debug("no further binding found");
       context.current_binding = NULL;
 
       int keytype = key->type;
@@ -281,7 +286,7 @@ void handle_key(TermKeyKey *key) {
 
   // === Try current_mode then global_mode ===================================
   if (context.current_mode == &context.global_mode) // This should actually
-    context.current_mode = &context.default_mode;  // never happen
+    context.current_mode = &context.default_mode;   // never happen
 
   if ((binding = binding_get_binding(context.current_mode->root, key)))
     return binding_execute(binding, context.current_mode, key);
@@ -318,7 +323,7 @@ WRITE_RAW:
   static
 void *redirect_to_stdout(void *_fd)
 {
-#define  REDIRECT_BUFSZ 4096
+  #define  REDIRECT_BUFSZ 4096
   int      fd = *((int*)_fd);
   char     buffer[REDIRECT_BUFSZ];
   char     *b;

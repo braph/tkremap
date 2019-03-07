@@ -1,7 +1,7 @@
 #include "tkremap.h"
 
 // bind_parse.c
-int binding_append_commands(binding_t*, int, char *[]);
+commands_t* commands_parse(int, char *[]);
 
 #define UNBOUND_UNICODE  (1 << TERMKEY_TYPE_UNICODE)
 #define UNBOUND_KEYSYM   (1 << TERMKEY_TYPE_KEYSYM)
@@ -36,13 +36,11 @@ static COMMAND_CALL_FUNC(cmd_unbound) {
   for (int j = 0; j <= 3; ++j) {
     if (flags & (1 << j)) {
       if (km->unbound[j])
-        binding_free(km->unbound[j]);
-      else
-        km->unbound[j] = calloc(1, sizeof(binding_t));
-
-      if (! binding_append_commands(km->unbound[j], argc - i, &args[i])) {
+        commands_free(km->unbound[j]);
+      else {
+        km->unbound[j] = commands_parse(argc - i, &args[i]); // TODO check for NULL
         //error_write("unknown key type/command: %s", args[i]);
-        return 0;
+        return 1;
       }
     }
   }

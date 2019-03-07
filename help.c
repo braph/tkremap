@@ -19,11 +19,17 @@
 #define ITALIC_END  "\033[0m"
 #endif
 
-#define EXAMPLE_TEXT \
-   "tkremap can also be used for macros \n"\
-   "tkremap -b 'Enter write \"set shiftwidth=2\n set tabstop=2\n gg=G:wg\n\"" \
-   "readline -P exec -p 'sh $ '" \
-   "bind ^C ^C ^C ^C ^C signal KILL" 
+#if README
+const char * const EXAMPLES = 
+  "Reindent a buch of *.c files:\n"
+  " tkremap -c 'bind Enter write \"set shiftwidth=2\n set tabstop=2\n gg=G:wg\n\"  vim *.c"
+  //"readline -P exec -p 'sh '"
+
+  "Configuration format:\n"
+  " Configuration lines end with a newline or a semicolon (;).\n"
+  " A line can be continued using the line continuation character (\\).\n"
+  " Multiple commands can be specified using \\; or &&\n";
+#endif
 
 #define P(...) \
   printf(__VA_ARGS__)
@@ -209,9 +215,7 @@ static char* fill_attrs(const char *s) {
     switch (*s) {
       case '*': // index = 42 % 2
       case '_': // index = 95 % 2
-#ifndef README
-        if (isatty(1))
-#endif
+        if (README || isatty(1))
           strcat(r, attrs[(2*(*s%2)) + (state = !state)]);
         break;
       case '\\':  strncat(r, ++s, 1);

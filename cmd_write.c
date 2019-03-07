@@ -31,11 +31,10 @@ static COMMAND_PARSE_FUNC(parse) {
   for (i = argc; i--;)
     size += strlen(args[i]);
 
-  cmd_write_args *cmd_args = malloc(sizeof(*cmd_args) + size);
+  cmd_write_args *cmd_args = calloc(1, sizeof(*cmd_args) + size);
   cmd_args->repeat = repeat;
 
-  strcpy(cmd_args->string, args[0]);
-  for (i = 1; i < argc; ++i)
+  for (i = 0; i < argc; ++i)
     strcat(cmd_args->string, args[i]);
 
   return (void*) cmd_args;

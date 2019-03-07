@@ -3,9 +3,9 @@
 #include "commands.h"
 #include "errormsg.h"
 
-/* parse single command, append to binding */
+/* parse single command, append to commands */
 static
-int binding_append_command(binding_t *binding, int argc, char *args[])
+int commands_append_command(commands_t *commands, int argc, char *args[])
 {
   command_t *cmd = NULL;
   void      *arg = NULL;
@@ -16,28 +16,33 @@ int binding_append_command(binding_t *binding, int argc, char *args[])
   if (! (arg = command_parse(cmd, argc - 1, &args[1])))
     return error_add("%s", cmd->name), 0;
 
-  binding->p.commands = realloc(binding->p.commands, ++binding->size * sizeof(command_call_t));
-  binding->p.commands[binding->size - 1].command = cmd;
-  binding->p.commands[binding->size - 1].arg = arg;
+  commands->commands = realloc(commands->commands, ++commands->size * sizeof(command_call_t));
+  commands->commands[commands->size - 1].command = cmd;
+  commands->commands[commands->size - 1].arg = arg;
   return 1;
 }
 
 static
-void binding_append_command_separator(binding_t *binding, int command_separator) {
-  binding->p.commands = realloc(binding->p.commands, ++binding->size * sizeof(command_call_t));
-  binding->p.commands[binding->size - 1].command = (command_t*) (uintptr_t) command_separator;
+void append_separator(commands_t *commands, int command_separator) {
+  commands->commands = realloc(commands->commands, ++commands->size * sizeof(command_call_t));
+  commands->commands[commands->size - 1].command = (command_t*) (uintptr_t) command_separator;
 }
 
 // TODO: free if failed
-/* parse multiple commands, append to binding */
-int binding_append_commands(binding_t *binding, int argc, char *args[])
+/* parse multiple commands, append to commands */
+commands_t* commands_parse(int argc, char *args[])
 {
-  int command_separator = -1;
-  int j;
+  int command_separator, j;
+
+  commands_t commands = {
+    .size     = 0,
+    .commands = NULL
+  };
 
   for (int i = 0; i < argc; ++i) {
+    command_separator = -1;
+
     for (j = i + 1; j < argc; ++j) {
-      command_separator = -1;
       if (streq(args[j], "\\;")) {
         command_separator = COMMAND_SEPARATOR_SEMICOLON;
         break;
@@ -48,14 +53,13 @@ int binding_append_commands(binding_t *binding, int argc, char *args[])
       }
     }
 
-    if (! binding_append_command(binding, j - i, &args[i]))
+    if (! commands_append_command(&commands, j - i, &args[i]))
       return 0;
     i = j;
 
-    if (command_separator == COMMAND_SEPARATOR_SEMICOLON ||
-        command_separator == COMMAND_SEPARATOR_AND)
-        binding_append_command_separator(binding, command_separator);
+    if (command_separator >= 0)
+        append_separator(&commands, command_separator);
   }
 
-  return 1;
+  return MEMDUP(&commands);
 }

@@ -30,46 +30,46 @@ static struct {
   { "backspace", TERMKEY_SYM_BACKSPACE },
   { "begin",     TERMKEY_SYM_BEGIN     },
   { "beg",       TERMKEY_SYM_BEGIN     },
-  //{ "btab",      TERMKEY_SYM_TAB,         TERMKEY_KEYMOD_SHIFT }
-  //{ "cancel",    TERMKEY_SYM_CANCEL    },
-  //{ "clear",     TERMKEY_SYM_CLEAR     },
-  //{ "close",     TERMKEY_SYM_CLOSE     },
-  //{ "command",   TERMKEY_SYM_COMMAND   },
-  //{ "copy",      TERMKEY_SYM_COPY      },
+//{ "btab",      TERMKEY_SYM_TAB,         TERMKEY_KEYMOD_SHIFT }
+//{ "cancel",    TERMKEY_SYM_CANCEL    },
+//{ "clear",     TERMKEY_SYM_CLEAR     },
+//{ "close",     TERMKEY_SYM_CLOSE     },
+//{ "command",   TERMKEY_SYM_COMMAND   },
+//{ "copy",      TERMKEY_SYM_COPY      },
   { "dc",        TERMKEY_SYM_DELETE    },
   { "down",      TERMKEY_SYM_DOWN      },
   { "end",       TERMKEY_SYM_END       },
   { "enter",     TERMKEY_SYM_ENTER     },
-  //{ "exit",      TERMKEY_SYM_EXIT      },
-  //{ "find",      TERMKEY_SYM_FIND      },
-  //{ "help",      TERMKEY_SYM_HELP      },
+//{ "exit",      TERMKEY_SYM_EXIT      },
+//{ "find",      TERMKEY_SYM_FIND      },
+//{ "help",      TERMKEY_SYM_HELP      },
   { "home",      TERMKEY_SYM_HOME      },
   { "ic",        TERMKEY_SYM_INSERT    },
   { "left",      TERMKEY_SYM_LEFT      },
-  //{ "mark",      TERMKEY_SYM_MARK      },
-  //{ "message",   TERMKEY_SYM_MESSAGE   },
-  //{ "mouse",     TERMKEY_SYM_NONE      },
-  //{ "move",      TERMKEY_SYM_MOVE      },
+//{ "mark",      TERMKEY_SYM_MARK      },
+//{ "message",   TERMKEY_SYM_MESSAGE   },
+//{ "mouse",     TERMKEY_SYM_NONE      },
+//{ "move",      TERMKEY_SYM_MOVE      },
   { "next",      TERMKEY_SYM_PAGEDOWN  },
   { "npage",     TERMKEY_SYM_PAGEDOWN  },
-  //{ "open",      TERMKEY_SYM_OPEN      },
-  //{ "options",   TERMKEY_SYM_OPTIONS   },
+//{ "open",      TERMKEY_SYM_OPEN      },
+//{ "options",   TERMKEY_SYM_OPTIONS   },
   { "ppage",     TERMKEY_SYM_PAGEUP    },
   { "previous",  TERMKEY_SYM_PAGEUP    },
   { "print",     TERMKEY_SYM_PRINT     },
-  //{ "redo",      TERMKEY_SYM_REDO      },
-  //{ "reference", TERMKEY_SYM_REFERENCE },
-  //{ "refresh",   TERMKEY_SYM_REFRESH   },
-  //{ "replace",   TERMKEY_SYM_REPLACE   },
-  //{ "restart",   TERMKEY_SYM_RESTART   },
-  //{ "resume",    TERMKEY_SYM_RESUME    },
+//{ "redo",      TERMKEY_SYM_REDO      },
+//{ "reference", TERMKEY_SYM_REFERENCE },
+//{ "refresh",   TERMKEY_SYM_REFRESH   },
+//{ "replace",   TERMKEY_SYM_REPLACE   },
+//{ "restart",   TERMKEY_SYM_RESTART   },
+//{ "resume",    TERMKEY_SYM_RESUME    },
   { "right",     TERMKEY_SYM_RIGHT     },
-  //{ "save",      TERMKEY_SYM_SAVE      },
-  //{ "select",    TERMKEY_SYM_SELECT    },
-  //{ "suspend",   TERMKEY_SYM_SUSPEND   },
-  //{ "undo",      TERMKEY_SYM_UNDO      },
+//{ "save",      TERMKEY_SYM_SAVE      },
+//{ "select",    TERMKEY_SYM_SELECT    },
+//{ "suspend",   TERMKEY_SYM_SUSPEND   },
+//{ "undo",      TERMKEY_SYM_UNDO      },
   { "up",        TERMKEY_SYM_UP        }
-  //{ NULL }
+//{ NULL }
 };
 
 // Stolen and adapted from libtermkey/driver-ti.c 
@@ -267,7 +267,7 @@ const char *get_key_code(TermKeyKey *key) {
     if (key->modifiers == 0)
       return get_sequence_for_sym(normal_lookup, normal_lookup_size, key->code.sym);
 
-#define case break; case
+    #define case break; case
     switch ((int) key->code.sym) {
       case TERMKEY_SYM_INSERT:    c = '2';
       case TERMKEY_SYM_DELETE:    c = '3';
@@ -280,9 +280,9 @@ const char *get_key_code(TermKeyKey *key) {
       case TERMKEY_SYM_LEFT:      c = 'D';
       case TERMKEY_SYM_END:       c = 'F';
       case TERMKEY_SYM_HOME:      c = 'H';
-                                  break; default: return NULL;
+      break; default: return NULL;
     }
-#undef case
+    #undef case
 
     mod = get_byte_for_mod(key->modifiers);
     buf[0] = 27;
@@ -301,32 +301,33 @@ const char *get_key_code(TermKeyKey *key) {
 
     buf[0] = 27;
     if (key->modifiers == 0) {
-#if ______B0___B1___B2___B3___B4___B5
-      F1-F4:  27   79   79+N 0    0    0
-        F5-F12:  27   91   X1   X2   126  0
-#endif
+      #if ______B0___B1___B2___B3___B4___B5
+        F1-F4:  27   79   79+N 0    0    0
+       F5-F12:  27   91   X1   X2   126  0
+      #endif
 
-        if (n <= 4) { // F1-F4
-          buf[1] = 79;
-          buf[2] = 79 + n;
-          buf[3] = 0;
-        }
-        else {        // F5-F12
-          buf[1] = 91;
-          buf[2] = (n <= 8 ? 49 : 50); // X1
-          buf[3] = (char[]){ 53, 55, 56, 57,48, 49, 51, 52 }[n - 5]; // X2
-          buf[4] = 126;
-          buf[5] = 0;
-        }
+      if (n <= 4) { // F1-F4
+        buf[1] = 79;
+        buf[2] = 79 + n;
+        buf[3] = 0;
+      }
+      else {        // F5-F12
+        buf[1] = 91;
+        buf[2] = (n <= 8 ? 49 : 50); // X1
+        buf[3] = (char[]){ 53, 55, 56, 57,48, 49, 51, 52 }[n - 5]; // X2
+        buf[4] = 126;
+        buf[5] = 0;
+      }
+
       return buf;
     }
     else {
-#if __________B0___B1___B2___B3___B4___B5___B6
-      (M)  F1-F4:  27   91   X1   59   MOD  79+N 0
-        (M) F5-F12:  27   91   X1   X2   59   MOD  126
-#endif
+      #if __________B0___B1___B2___B3___B4___B5___B6
+       (M)  F1-F4:  27   91   X1   59   MOD  79+N 0
+       (M) F5-F12:  27   91   X1   X2   59   MOD  126
+      #endif
 
-        mod = get_byte_for_mod(key->modifiers);
+      mod = get_byte_for_mod(key->modifiers);
       buf[1] = 91;
       buf[2] = (n <= 8 ? 49 : 50); // X1
       buf[3] = (char[]) { 59, 59, 59, 59, 53, 55, 56, 57, 48, 49, 51, 52 } [n - 1]; // X2

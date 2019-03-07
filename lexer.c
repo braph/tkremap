@@ -5,54 +5,27 @@
 #include <string.h>
 #include <error.h>
 
-static FILE         *lex_in;
-static int           lex_is_eof;
-
-#define              LEX_TOKEN_BUF_INC 1024
-static char         *lex_token_buf;
-static int           lex_token_bufsz;
-static int           lex_token_pos;
-
-#define              LEX_BUF_SZ 3
-static char          lex_buf[LEX_BUF_SZ];
-static int           lex_buf_pos;
-
-#define              LEX_ERROR_BUF_SZ 1024
-static int           lex_errno;
-static char         *lex_error_buf;
-
-#define LEX_SYM(SYM) \
-  ( SYM == LEX_TOKEN_END          ? "END"      :\
-    ( SYM == LEX_TOKEN_SINGLE_QUOTE ? "SINGLE"   :\
-      ( SYM == LEX_TOKEN_DOUBLE_QUOTE ? "DOUBLE"   :\
-        ( SYM == LEX_TOKEN_WORD         ? "WORD"     :\
-          "???" ))))
+lexer_t *_current_lex;
+#define lex (*_current_lex)
 
 int lex_init(FILE *in) {
-  lex_in            = in;
-  lex_line          = 1;
-  lex_line_pos      = 1;
-
-  lex_is_eof        = 0;
-
-  lex_token_buf     = malloc(LEX_TOKEN_BUF_INC);
-  lex_token_pos     = 0;
-  lex_token_bufsz   = LEX_TOKEN_BUF_INC;
-
-  lex_errno         = 0;
-  lex_error_buf     = NULL;
-
-  lex_buf_pos       = -1;
-
-  if (! lex_token_buf)
+  _current_lex = calloc(1, sizeof(lexer_t));
+  if (! _current_lex)
     return 0;
+
+  lex.in       = in;
+  lex.line     = 1;
+  lex.line_pos = 1;
+  lex.buf_pos  = -1;
+
   return 1;
 }
 
 void lex_destroy() {
-  free(lex_token_buf);
-  if (lex_error_buf)
-    free(lex_error_buf);
+  free(lex.token_buf);
+  free(lex.error_buf);
+  free(_current_lex);
+  _current_lex = NULL;
 }
 
 /*
@@ -60,75 +33,74 @@ void lex_destroy() {
  * so we don't have to care about it in lex()
  */
 static int feed_buf() {
-  int c1 = fgetc(lex_in);
+  int c1 = fgetc(lex.in);
 
   if (c1 == EOF || c1 == 0)
     return EOF;
 
   if (c1 == '\\') {
-    int c2 = fgetc(lex_in);
+    int c2 = fgetc(lex.in);
 
     if (c2 == '\n') {
-      lex_line++;
-      lex_line_pos = 1;
+      lex.line++;
+      lex.line_pos = 1;
       return feed_buf();
     }
     else if (c2 == EOF || c2 == 0) {
-      lex_buf[++lex_buf_pos] = c1;
+      lex.buf[++lex.buf_pos] = c1;
     }
     else {
-      lex_buf[++lex_buf_pos] = c2;
-      lex_buf[++lex_buf_pos] = c1;
+      lex.buf[++lex.buf_pos] = c2;
+      lex.buf[++lex.buf_pos] = c1;
     }
   }
   else {
-    lex_buf[++lex_buf_pos] = c1;
+    lex.buf[++lex.buf_pos] = c1;
   }
 
   return 1;
 }
 
 static int lex_peekc() {
-  if (lex_buf_pos == -1) {
+  if (lex.buf_pos == -1) {
     if (feed_buf() == EOF)
       return EOF;
   }
 
-  return lex_buf[lex_buf_pos];
+  return lex.buf[lex.buf_pos];
 }
 
 static int lex_getc() {
-  if (lex_buf_pos == -1) {
+  if (lex.buf_pos == -1) {
     if (feed_buf() == EOF)
       return EOF;
   }
 
-  if (lex_buf[lex_buf_pos] == '\n') {
-    lex_line++,
-      lex_line_pos = 1;
-  }
+  if (lex.buf[lex.buf_pos] == '\n')
+    lex.line++, lex.line_pos = 1;
   else
-    lex_line_pos++;
+    lex.line_pos++;
 
-  return lex_buf[lex_buf_pos--];
+  return lex.buf[lex.buf_pos--];
 }
 
 static void lex_ungetc(int c) {
-  lex_line_pos--;
-  lex_buf[++lex_buf_pos] = c;
+  lex.line_pos--;
+  lex.buf[++lex.buf_pos] = c;
 }
 
 static void token_clear() {
-  lex_token_pos = 0;
+  lex.token_pos = 0;
 }
 
+#define LEX_TOKEN_BUF_INC 1024
 static void token_append(int c) {
-  if (lex_token_pos == lex_token_bufsz) {
-    lex_token_bufsz += LEX_TOKEN_BUF_INC;
-    lex_token_buf = realloc(lex_token_buf, lex_token_bufsz);
+  if (lex.token_pos == lex.token_bufsz) {
+    lex.token_bufsz += LEX_TOKEN_BUF_INC;
+    lex.token_buf = realloc(lex.token_buf, lex.token_bufsz);
   }
 
-  lex_token_buf[lex_token_pos++] = c;
+  lex.token_buf[lex.token_pos++] = c;
 }
 
 static void token_finalize() {
@@ -136,7 +108,7 @@ static void token_finalize() {
 }
 
 char* lex_token() {
-  return lex_token_buf;
+  return lex.token_buf;
 }
 
 static unsigned int read_hex() {
@@ -146,8 +118,8 @@ static unsigned int read_hex() {
   while (isxdigit((c = lex_getc())))
     val = val * 16 + 
       (c <= '9' ? c - '0'      :
-       (c <= 'F' ? c - 'A' + 10 :
-        c - 'a' + 10));
+      (c <= 'F' ? c - 'A' + 10 :
+       c - 'a' + 10));
   lex_ungetc(c);
   return val;
 }
@@ -202,7 +174,7 @@ static int read_double_quote() {
       token_append(c);
   }
 
-  lex_errno = LEX_ERROR_MISSING_DOUBLE_QUOTE;
+  lex.error_num = LEX_ERROR_MISSING_DOUBLE_QUOTE;
   return LEX_ERROR;
 }
 
@@ -219,7 +191,7 @@ static int read_single_quote() {
       token_append(c);
   }
 
-  lex_errno = LEX_ERROR_MISSING_SINGLE_QUOTE;
+  lex.error_num = LEX_ERROR_MISSING_SINGLE_QUOTE;
   return LEX_ERROR;
 }
 
@@ -253,7 +225,7 @@ static int read_word() {
   return LEX_TOKEN_WORD;
 }
 
-int lex() {
+int lex_lex() {
   int c = lex_getc();
 
   switch (c) {
@@ -263,8 +235,8 @@ int lex() {
     case '\n':  return LEX_TOKEN_END;
     case '#':   consume_comment(); /* fall through */
     case ' ':
-    case '\t':  return lex();
-    case EOF:   lex_is_eof = 1;
+    case '\t':  return lex_lex();
+    case EOF:   lex.is_eof = 1;
                 return EOF;
     default:    lex_ungetc(c);
                 return read_word();
@@ -272,23 +244,24 @@ int lex() {
 }
 
 int lex_eof() {
-  return lex_is_eof;
+  return lex.is_eof;
 }
 
+#define LEX_ERROR_BUF_SZ 1024
 char *lex_error() {
-  if (! lex_error_buf)
-    lex_error_buf = malloc(LEX_ERROR_BUF_SZ);
+  if (! lex.error_buf)
+    lex.error_buf = malloc(LEX_ERROR_BUF_SZ);
 
-  sprintf(lex_error_buf, "%d:%d: ", lex_line, lex_line_pos);
+  sprintf(lex.error_buf, "%d:%d: ", lex.line, lex.line_pos);
 
-  switch (lex_errno) {
+  switch (lex.error_num) {
     case 0:
-      return strcat(lex_error_buf, strerror(0));
+      return strcat(lex.error_buf, strerror(0));
     case LEX_ERROR_MISSING_SINGLE_QUOTE:
-      return strcat(lex_error_buf, "unterminated single quote");
+      return strcat(lex.error_buf, "unterminated single quote");
     case LEX_ERROR_MISSING_DOUBLE_QUOTE:
-      return strcat(lex_error_buf, "unterminated double quote");
+      return strcat(lex.error_buf, "unterminated double quote");
     default:
-      return strcat(lex_error_buf, "error in lexer");
+      return strcat(lex.error_buf, "error in lexer");
   }
 }

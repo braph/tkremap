@@ -9,12 +9,12 @@
 #define MODE     (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH)
 
 typedef struct cmd_exec_args {
-  uint8_t   use_shell;
-  uint8_t   background;
-  char     *in;
-  char     *err;
-  char     *out;
-  char    **args;
+  unsigned use_shell  : 1;
+  unsigned background : 1;
+  char    *in;
+  char    *err;
+  char    *out;
+  char   **args;
 } cmd_exec_args;
 
 // TODO: filedescriptor stuff (close etc.)
@@ -101,7 +101,7 @@ static COMMAND_PARSE_FUNC(cmd_exec_parse) {
   cmd_args.args = malloc((argc + 1) * sizeof(char*));
   cmd_args.args[argc] = NULL;
   for (int i = argc; i--; )
-    cmd_args.args[i]  = strdup(args[i]);
+    cmd_args.args[i] = strdup(args[i]);
 
   return MEMDUP(&cmd_args);
 }
@@ -118,7 +118,7 @@ static void cmd_exec_free(void *_arg) {
 const command_t command_exec = {
   .name  = "exec",
   .desc  = 
-    "Redirect program output to program",
+    "Call external program",
   .args  = (const char*[]) { "COMMAND", "*ARGS", 0 },
   .opts  = (const command_opt_t[]) {
     {'s', NULL,     "Pass _COMMAND_ to /bin/sh instead of invoking it using *exec(3)*"},
