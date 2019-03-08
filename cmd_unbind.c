@@ -3,7 +3,7 @@
 void binding_del_binding(binding_t *binding, TermKeyKey *key) {
   for (int i=0; i < binding->size; ++i)
     if (! termkey_keycmp(tk, key, &binding->bindings[i]->key)) {
-      //binding_free(binding->bindings[i]);
+      free(binding->bindings[i]);
       for (++i; i < binding->size; ++i)
         binding->bindings[i - 1] = binding->bindings[i];
       break;

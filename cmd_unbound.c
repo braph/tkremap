@@ -12,6 +12,7 @@ static COMMAND_CALL_FUNC(cmd_unbound) {
   char **args;
   unpackargs(&argc, &args, NULL, (command_args_t*) cmd->arg);
 
+  // Read TYPEs
   int i, flags = 0;
   for (i = 0; i < argc; ++i)
     if (streq(args[i], "any"))
@@ -30,17 +31,33 @@ static COMMAND_CALL_FUNC(cmd_unbound) {
   if (flags == 0)
     flags = UNBOUND_ANY;
 
+  // Build commands
+  commands_t *commands[4] = { 0, 0, 0, 0 };
+
+  for (int f = 0; f < 4; ++f) {
+    if (flags & (1 << f)) {
+      if (! (commands[f] = commands_parse(argc - i, &args[i]))) {
+        while (--f >= 0)
+          if (commands[f]) {
+            commands_free(commands[f]);
+            free(commands[f]);
+          }
+        return 0;
+      }
+    }
+  }
+
+  // Replace commands
   keymode_t *km = context.current_mode;
 
-  for (int j = 0; j <= 3; ++j) {
-    if (flags & (1 << j)) {
-      if (km->unbound[j]) {
-        commands_free(km->unbound[j]);
-        free(km->unbound[j]);
+  for (int f = 0; f < 4; ++f) {
+    if (commands[f]) {
+      if (km->unbound[f]) {
+        commands_free(km->unbound[f]);
+        free(km->unbound[f]);
       }
       else {
-        km->unbound[j] = commands_parse(argc - i, &args[i]);
-        return !! km->unbound[j];
+        km->unbound[f] = commands[f];
       }
     }
   }

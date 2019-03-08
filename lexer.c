@@ -5,7 +5,7 @@
 #include <string.h>
 #include <error.h>
 
-lexer_t *_current_lex;
+lexer_t      *_current_lex;
 #define lex (*_current_lex)
 
 int lex_init(FILE *in) {

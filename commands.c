@@ -2,6 +2,8 @@
 #include "errormsg.h"
 #include "commands.h"
 
+// TODO
+
 extern command_t
   command_write,
   command_unbound,

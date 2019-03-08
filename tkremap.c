@@ -10,6 +10,9 @@
 #include <stdarg.h>
 #include <unistd.h>
 
+#define SET_CURSOR_Y_X "\033[%d;%dH"
+#define REQUEST_CURSOR "\033[6n"
+
 struct context_t context;
 
 void writeb_to_program(const char *s, ssize_t len) {
@@ -379,12 +382,9 @@ void stop_program_output() {
 }
 
 void get_cursor(int fd, int *y, int *x) {
-  // Send "\033[6n"
-  // Expect ^[[8;14R
-  fd = STDIN_FILENO;
+  fd = STDIN_FILENO; // TODO
   *x = *y = 0;
   struct termios tios, old_tios;
-  char cmd[] = { 033, '[', '6', 'n' };
   char c;
 
   if (tcgetattr(fd, &tios) == 0) {
@@ -392,9 +392,11 @@ void get_cursor(int fd, int *y, int *x) {
     cfmakeraw(&tios);
     tcsetattr(fd, TCSANOW, &tios);
 
-    write(fd, cmd, sizeof(cmd));
-    read(fd, cmd, 2); // ESC, [
+    write(fd, REQUEST_CURSOR, sizeof(REQUEST_CURSOR)-1);
+    read(fd, &c, 1); // ESC
+    read(fd, &c, 1); // [
 
+    // Expect ^[[8;14R
     while (read(fd, &c, 1) && c != ';')
       *y = (*y * 10) + c - '0';
 
@@ -406,7 +408,7 @@ void get_cursor(int fd, int *y, int *x) {
 }
 
 void set_cursor(int fd, int y, int x) {
-  dprintf(fd, "\033[%d;%dH", y, x);
+  dprintf(fd, SET_CURSOR_Y_X, y, x);
 }
 
 void set_input_mode() {

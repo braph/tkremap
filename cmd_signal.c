@@ -7,15 +7,17 @@ static struct {
   int   number;
   char  *name;
 } signals[] = {
-  { SIGINT,  "INT"  },
-  { SIGHUP,  "HUP"  },
-  { SIGTERM, "TERM" },
-  { SIGKILL, "KILL" },
-  { SIGTSTP, "TSTP" },
-  { SIGSTOP, "STOP" },
-  { SIGCONT, "CONT" },
-  { SIGUSR1, "USR1" },
-  { SIGUSR2, "USR2" }
+  { SIGINT,   "INT"   },
+  { SIGHUP,   "HUP"   },
+  { SIGTERM,  "TERM"  },
+  { SIGKILL,  "KILL"  },
+  { SIGTSTP,  "TSTP"  },
+  { SIGSTOP,  "STOP"  },
+  { SIGCONT,  "CONT"  },
+  { SIGUSR1,  "USR1"  },
+  { SIGUSR2,  "USR2"  },
+  { SIGALRM,  "ALRM"  },
+  { SIGWINCH, "WINCH" }
 };
 #define SIGNAL_SIZE (sizeof(signals)/sizeof(signals[0]))
 

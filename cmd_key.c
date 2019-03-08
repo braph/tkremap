@@ -20,8 +20,8 @@ static COMMAND_CALL_FUNC(call) {
 
 static COMMAND_PARSE_FUNC(parse) {
   const char   *seq;
-  int           repeat    = 1;
-  cmd_key_args *cmd_args  = NULL;
+  int           repeat   = 1;
+  cmd_key_args *cmd_args = NULL;
   char          sequences[argc * 16];
   sequences[0] = 0;
 

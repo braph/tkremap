@@ -53,6 +53,8 @@ static COMMAND_CALL_FUNC(cmd_exec_call) {
 
     if (infd >= 0)
       dup2(infd, STDIN_FILENO);
+    else if (cmd_args->background)
+      close(STDIN_FILENO);
 
     if (cmd_args->use_shell)
       return execl("/bin/sh", "sh", "-c", cmd_args->args[0], NULL), 0;

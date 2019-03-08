@@ -9,9 +9,9 @@
 #include <termios.h>
 #include <readline/readline.h>
 
-#define SMCUP       "\033[?1049h"
-#define RMCUP       "\033[?1049l"
-#define CLEARLINE   "\033[K"
+#define SMCUP      "\033[?1049h"
+#define RMCUP      "\033[?1049l"
+#define CLEARLINE  "\033[K"
 #define STRLEN(S) (sizeof(S) - 1)
 
 int read_conf_string(const char *); // conf.h
@@ -61,12 +61,13 @@ void refresh_window(int fd) {
 
 static int confirm(cmd_readline_args *args) {
   if (args->prompt)
-    printf(args->prompt);
+    fputs(args->prompt, stdout);
 
   for (;;)
     switch(getchar()) {
       case 'y': case 'Y': return 1;
       case 'n': case 'N': return 0;
+      case EOF:           return 0;
     }
 }
 

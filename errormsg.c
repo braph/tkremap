@@ -37,8 +37,9 @@ void error_write(const char *fmt, ...) {
 #define MAX 2048
 #define SEPERATOR ": "
 #define SEPERATOR_LEN (sizeof(SEPERATOR) - 1)
+
 void error_add(const char *fmt, ...) {
-  // build "added error: "
+  // Build "added error: "
   char temp[MAX + SEPERATOR_LEN + 1];
   va_list ap;
   va_start(ap, fmt);

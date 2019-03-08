@@ -55,7 +55,7 @@ again:
       return 1;
   }
 
-  // try $file.CFG_EXTENSION
+  // Try $file.CFG_EXTENSION
   char *dot = strrchr(f, '.');
   if (dot == NULL || !streq(dot, "." CFG_EXTENSION)) {
     sprintf(file, "%s." CFG_EXTENSION, f);

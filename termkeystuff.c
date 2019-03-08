@@ -228,11 +228,13 @@ int parse_key(const char *def, TermKeyKey *key) {
   return error_write("%s: %s", E_INVALID_KEY, def), 0;
 }
 
+#if DEBUG
 const char *format_key(TermKeyKey *key) {
   static char buf[32];
   termkey_strfkey(tk, buf, sizeof(buf), key, 0);
   return buf;
 }
+#endif
 
 static inline __attribute__((always_inline))
   char get_byte_for_mod(int modifiers) {
