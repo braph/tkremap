@@ -47,6 +47,9 @@ void error_add(const char *fmt, ...) {
   va_end(ap);
   strcat(temp, SEPERATOR);
 
+  if (! error_msg)
+    error_msg = strdup("NO PREVIOUS ERROR");
+
   int oldlen  = strlen(error_msg);
   int newsize = templen + oldlen + 1;
 

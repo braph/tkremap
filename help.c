@@ -1,14 +1,19 @@
 /* No memory management here, since help is a dead op */
 
 #include "tkremap.h"
+#include "termkeystuff.h"
 #include "commands.h"
 
 #include <unistd.h>
 #include <string.h>
 
-#ifndef README
+#if README
+#define BOLD        "**"
+#define BOLD_END    "**"
+#define ITALIC      "_"
+#define ITALIC_END  "_"
+#else
 #define README 0
-#endif
 #ifndef BOLD
 #define BOLD        "\033[1m"
 #endif
@@ -21,6 +26,7 @@
 #ifndef ITALIC_END
 #define ITALIC_END  "\033[0m"
 #endif
+#endif // README
 
 #if README
 const char * const EXAMPLES = 
@@ -236,6 +242,7 @@ static char* fill_attrs(const char *s) {
   return r;
 }
 
+#include <time.h>
 static void help_keys() {
   PA(
       "_Keys_\n\n"
@@ -244,12 +251,34 @@ static void help_keys() {
       "  Escape, Space, Enter, Tab, Backspace, F1 .. F12\n"
       "\n"
       " *Modifiers*\n"
-      "  *Control*: Control-key, Ctrl-key, C-key, ^key\n"
+      "  *Control*: Ctrl-key, C-key, ^key\n"
       "  *Alt*:     Alt-key, A-key, Meta-key, M-key\n"
       "  *Shift*:   Shift-key, S-key\n"
       "\n"
-      " *Special*\n"
-      "\n"
     );
+
+  char buf[99];
+  TermKeyKey key;
+  srand(time(NULL));
+  int t, c, m, f;
+  for (int i = 0; i < 20; ++i) {
+    t = rand(), c = rand(), m = rand(), f = rand();
+
+    #define case break; case
+    switch ((int) (key.type = (t % 3))) {
+      case TERMKEY_TYPE_UNICODE:
+        key.code.codepoint = (c % 'Z') + 'a';
+      case TERMKEY_TYPE_KEYSYM:
+        key.code.sym       = (c % TERMKEY_SYM_END) + 1;
+      case TERMKEY_TYPE_FUNCTION:
+        key.code.number    = (c % 12) + 1;
+    }
+    #undef case
+
+    key.modifiers = (m & TERMKEY_KEYMOD_ALT) | (m & TERMKEY_KEYMOD_CTRL) | (m & TERMKEY_KEYMOD_SHIFT);
+    f = (f & TERMKEY_FORMAT_LONGMOD) | (f & TERMKEY_FORMAT_CARETCTRL) | (f & TERMKEY_FORMAT_ALTISMETA);
+    termkey_strfkey(tk, buf, 99, &key, f);
+    PFA(" *%s*,", buf);
+  }
 }
 

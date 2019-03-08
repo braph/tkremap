@@ -11,20 +11,21 @@ args = parser.parse_args()
 
 words = {
     'bind':       'b',
+    'command':    'co',
+    'exec':       'ex',
     'ignore':     'ig',
+    'key':        'ke',
     'mode':       'mo',
     'mask':       'ma',
-    'unbind':     'unbi',
-    'unbound':    'unbo',
     'repeat':     'rep',
     'rehandle':   'reh',
     'readline':   'rea',
-    'command':    'co',
     'signal':     'si',
-    'key':        'ke',
-    'pop':        'po',
-    'pop-mode':   'po',
-    'write':      'wr'
+    'unbind':     'unbi',
+    'unbound':    'unbo',
+    'write':      'wr',
+    'on':         'on',
+    'off':        'of'
 }
 
 def strip_conf(s):

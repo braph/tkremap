@@ -65,7 +65,7 @@ command_t command_bind = {
   .name  = "bind",
   .desc  = 
     "Bind _KEY_ to _COMMAND_\n"
-    "Multiple commands can be specified, they have to be seperated by '\\\\;' or '&&'.\n"
+    "Multiple commands can be specified, they have to be seperated by '*\\\\;*' or '*&&*'.\n"
     "Keys can be chained.",
   .args  = (const char*[]) { "+KEY", "+COMMAND", 0 },
   .call  = &cmd_bind_call,

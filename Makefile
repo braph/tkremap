@@ -5,25 +5,24 @@ STRIP        = strip
 CFLAGS      += -Wall
 
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -DFREE_MEMORY=1 -DDEBUG=1
-	STRIP     = true
+	CFLAGS 		+= -g -DFREE_MEMORY=1 -DDEBUG=1
+	STRIP      = true
 else
-	CFLAGS += -O3
+	CFLAGS 		+= -O3
 endif
 
 ifeq ($(FREE_MEMORY), 1)
-	CFLAGS += -DFREE_MEMORY=1
+	CFLAGS 		+= -DFREE_MEMORY=1
 endif
 
 ifeq ($(README), 1)
-CFLAGS += -DBOLD='"**"' -DBOLD_END='"**"' -DITALIC='"_"' -DITALIC_END='"_"'
-CFLAGS += -DREADME
+	CFLAGS 		+= -DREADME
 endif
 
-CMDS = bind command exec unbind unbound core key load readline signal write
+CMDS = bind exec unbind unbound core key load readline signal write
 CMDS := $(addprefix cmd_, $(CMDS))
 
-OBJS  = $(CMDS) termkeystuff tkremap conf common lexer options commands help errormsg
+OBJS  = $(CMDS) aliases termkeystuff tkremap conf common lexer options commands help errormsg
 OBJS := $(addsuffix .o, $(OBJS))
 
 build: $(OBJS)
@@ -39,11 +38,18 @@ install:
 
 README.md: .force
 	sed -n '/^Usage:/q;p' README.md > README.new
-	./$(PROGNAME) -h all | sed 's/^ /\&nbsp;\&nbsp;\&nbsp;\&nbsp;/g; s/$$/  /g' >> README.new
+	./$(PROGNAME) -h all \
+		| sed 's/^ /\&nbsp;\&nbsp;\&nbsp;\&nbsp;/g; s/$$/  /g' >> README.new
 	mv README.new README.md
 
 $(PROGNAME).1: .force
-	cp README.md $(PROGNAME).1.ronn
+	sed -n '/^Usage:/q;p' README.md > $(PROGNAME).1.ronn
+	./$(PROGNAME) -h all \
+		| sed 's/$$/  /g' \
+		| sed 's/^_OPTIONS_/## OPTIONS/g' \
+		| sed 's/^_Commands_/## COMMANDS/g' \
+		| sed 's/^_Keys_/## KEYS/g' \
+		>> $(PROGNAME).1.ronn
 	ronn --roff $(PROGNAME).1.ronn
 	rm -f $(PROGNAME).1.ronn
 

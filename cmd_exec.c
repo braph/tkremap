@@ -72,7 +72,7 @@ static COMMAND_CALL_FUNC(cmd_exec_call) {
 }
 
 static COMMAND_PARSE_FUNC(cmd_exec_parse) {
-  cmd_exec_args *cmd_args = calloc(1, sizeof(cmd_args));
+  cmd_exec_args *cmd_args = calloc(1, sizeof(*cmd_args));
 
   for (option *opt = options; opt->opt; ++opt) {
     #define case break; case

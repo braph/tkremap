@@ -1,4 +1,5 @@
 #include "common.h"
+#include "aliases.h"
 #include "errormsg.h"
 #include "commands.h"
 
@@ -19,7 +20,6 @@ extern command_t
   command_key,
   command_ignore,
   command_exec,
-  command_command,
   command_bind;
 
 command_t* commands[] = {
@@ -37,7 +37,6 @@ command_t* commands[] = {
   &command_key,
   &command_ignore,
   &command_exec,
-  &command_command,
   &command_bind
 };
 int commands_size = (sizeof(commands)/sizeof(commands[0]));
@@ -63,6 +62,15 @@ command_call_t* command_parse(int argc, char **args, command_call_t *store) {
   void   *arg     = NULL;
   option *options = NULL;
   char   *name    = args_get_arg(&argc, &args, NULL);
+
+  // Resolve alias first
+  char **aliased_argv = alias_resolve(name, &argc, args);
+  if (aliased_argv) {
+    command_call_t* ret = command_parse(argc, aliased_argv, store);
+    freeArray(aliased_argv, argc);
+    return ret;
+  }
+
   command_t *cmd  = get_command(name);
   if (! cmd)
     return NULL;

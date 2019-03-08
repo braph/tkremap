@@ -2,6 +2,7 @@
 #include "tkremap.h"
 #include "errormsg.h"
 #include "vi_conf.h"
+#include "aliases.h"
 #include "conf.h"
 
 #include <err.h>
@@ -20,7 +21,7 @@
   " *-m* _MODE_\t"          "Switch to _MODE_\n"                   \
   " *-b* _KEY_ _CMD_\t"     "Alias for 'bind _KEY_ _CMD_'\n"       \
   " *-k* _IN_ _OUT_\t"      "Alias for 'bind _IN_ key _OUT_'\n"    \
-  " *-u* _KEY_\t\t"         "Alias for 'unbind _KEY_\n"            \
+  " *-u* _KEY_\t\t"         "Alias for 'unbind _KEY_'\n"           \
   " *-v*\t\t"               "Load builtin vi config\n"             \
   "\n" \
   "For more help:\n"                                               \
@@ -42,6 +43,7 @@ int main(int argc, char *argv[]) {
   char *arg2 = NULL;
 
   context_init();
+  alias_init();
 
   if (! load_terminfo())
     errx(1, "Could not setup terminfo");

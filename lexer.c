@@ -202,6 +202,10 @@ static void consume_comment() {
       break;
 }
 
+static int issyntax(int c) {
+  return !!strchr("'\"\\;&", c);
+}
+
 static int read_word() {
   int c;
 
@@ -211,7 +215,7 @@ static int read_word() {
       token_append(c);
       token_append(lex_getc());
     }
-    else if (c == '\'' || c == '"' || c == ';' || isspace(c)) {
+    else if (isspace(c) || issyntax(c)) {
       lex_ungetc(c);
       break;
     }

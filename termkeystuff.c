@@ -201,8 +201,13 @@ int parse_key(const char *def, TermKeyKey *key) {
   if (last_char != NULL && *last_char == 0)
     return 1;
 
-  // Try Meta-k, M-k instead of Alt-k, A-k
+  // Try A-k instead of M-k
   last_char = termkey_strpkey(tk, def, key, TERMKEY_FORMAT_ALTISMETA);
+  if (last_char != NULL && *last_char == 0)
+    return 1;
+
+  // Try Meta-k, Alt-k instead of M-k, A-k
+  last_char = termkey_strpkey(tk, def, key, TERMKEY_FORMAT_ALTISMETA|TERMKEY_FORMAT_LONGMOD);
   if (last_char != NULL && *last_char == 0)
     return 1;
 

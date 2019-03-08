@@ -1,0 +1,358 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "TKREMAP" "1" "March 2019" "" ""
+.
+.SH "NAME"
+\fBtkremap\fR
+.
+.P
+change keybindings of terminal applications
+.
+.P
+tkremap is a C program built upon libtermkey which allows you to change the keybindings of a terminal application\.
+.
+.P
+It supports multiple keymodes, similar to vi\'s input\-/insert mode\.
+.
+.P
+See VI Config \fIconfs/vi\.conf\fR for a configuration sample\.
+.
+.P
+Usage: \fB\./tkremap\fR [\fIOPTIONS\fR] PROGRAM [\fIARGUMENTS\fR\.\.\.]
+.
+.SH "OPTIONS"
+\fB\-C\fR \fISTRING\fR Read config string
+.
+.br
+\fB\-c\fR \fIFILE\fR Read config file (see \-h load)
+.
+.br
+\fB\-m\fR \fIMODE\fR Switch to \fIMODE\fR
+.
+.br
+\fB\-b\fR \fIKEY\fR \fICMD\fR Alias for \'bind \fIKEY\fR \fICMD\fR\'
+.
+.br
+\fB\-k\fR \fIIN\fR \fIOUT\fR Alias for \'bind \fIIN\fR key \fIOUT\fR\'
+.
+.br
+\fB\-u\fR \fIKEY\fR Alias for \'unbind \fIKEY\fR
+.
+.br
+\fB\-v\fR Load builtin vi config
+.
+.P
+For more help:
+.
+.br
+\fB\-h\fR \fICOMMAND\fR
+.
+.br
+\fB\-h\fR commands
+.
+.br
+\fB\-h\fR keys
+.
+.br
+\fB\-h\fR all
+.
+.SH "COMMANDS"
+\fBbind\fR \fIKEY\fR\.\.\. \fICOMMAND\fR\.\.\.
+.
+.br
+Bind \fIKEY\fR to \fICOMMAND\fR
+.
+.br
+Multiple commands can be specified, they have to be seperated by \'\e;\' or \'&&\'\.
+.
+.br
+Keys can be chained\.
+.
+.P
+\fBcommand\fR [\-ncrs] [\-p PROMPT] [\-i TEXT] [\-x X] [\-y Y] [\-k KEY] [\-A TEXT] [\-P TEXT]
+.
+.br
+Read and execute a tkremap command
+.
+.P
+\fB\-p\fR \fIPROMPT\fR See \fBreadline\fR
+.
+.br
+\fB\-i\fR \fITEXT\fR See \fBreadline\fR
+.
+.br
+\fB\-x\fR \fIX\fR See \fBreadline\fR
+.
+.br
+\fB\-y\fR \fIY\fR See \fBreadline\fR
+.
+.br
+\fB\-n\fR See \fBreadline\fR
+.
+.br
+\fB\-k\fR \fIKEY\fR See \fBreadline\fR
+.
+.br
+\fB\-c\fR See \fBreadline\fR
+.
+.br
+\fB\-r\fR See \fBreadline\fR
+.
+.br
+\fB\-s\fR See \fBreadline\fR
+.
+.br
+\fB\-A\fR \fITEXT\fR See \fBreadline\fR
+.
+.br
+\fB\-P\fR \fITEXT\fR See \fBreadline\fR
+.
+.P
+\fBexec\fR [\-sb] [\-o FILE] [\-e FILE] [\-i FILE] \fICOMMAND\fR [\fIARGS\fR\.\.\.]
+.
+.br
+Call external program
+.
+.P
+\fB\-s\fR Pass \fICOMMAND\fR to /bin/sh instead of invoking it using \fBexec(3)\fR
+.
+.br
+\fB\-b\fR Run \fICOMMAND\fR in background
+.
+.br
+\fB\-o\fR \fIFILE\fR Redirect STDOUT of \fICOMMAND\fR to \fIFILE\fR\. Pass \fB**+**\fR for redirecting to program\'s STDIN
+.
+.br
+\fB\-e\fR \fIFILE\fR Redirect STDERR of \fICOMMAND\fR to \fIFILE\fR\. Pass \fB**+**\fR for redirecting to program\'s STDIN
+.
+.br
+\fB\-i\fR \fIFILE\fR Use \fIFILE\fR as STDIN for \fICOMMAND\fR\.
+.
+.P
+\fBignore\fR
+.
+.br
+Completely ignore the current pressed key
+.
+.P
+\fBkey\fR [\-r N] \fIKEY\fR\.\.\.
+.
+.br
+Send key to program
+.
+.P
+\fB\-r\fR \fIN\fR Repeat the key N times
+.
+.P
+\fBload\fR \fIFILE\fR
+.
+.br
+Load configuration file
+.
+.br
+If file is a sole filename it will be
+.
+.br
+searched in the following places:
+.
+.br
+\- $PWD
+.
+.br
+\- $XDG_CONFIG_HOME/tkremap
+.
+.br
+\- $HOME/\.config/tkremap
+.
+.br
+\- $HOME/\.tkremap
+.
+.P
+The extension \.conf will be added if missing
+.
+.P
+\fBmask\fR
+.
+.br
+Do not interprete the next keypress as a keybinding
+.
+.P
+\fBmode\fR \fIMODE|\-p\fR
+.
+.br
+Switch to \fIMODE\fR
+.
+.P
+Pass \fB\-p\fR for previous mode
+.
+.P
+\fBpass\fR
+.
+.br
+Send the pressed key to the program
+.
+.P
+\fBreadline\fR [\-ncrs] [\-p PROMPT] [\-i TEXT] [\-x X] [\-y Y] [\-k KEY] [\-A TEXT] [\-P TEXT]
+.
+.br
+Write to program using readline
+.
+.P
+Since this command writes to STDOUT a redraw of the screen may be desired:
+.
+.br
+\fB\-k\fR Redraw the applicaton by sending a key\.
+.
+.br
+Most applications recognize \fBC\-l\fR for refreshing the window content\. This is the perferred way\.
+.
+.br
+\fB\-r\fR Redraw the application by resizing the PTY and sending SIGWINCH\.
+.
+.P
+There\'s also the possibility to save and restore the terminal\'s screen content
+.
+.br
+using \fItput smcup\fR and \fItput rmcup\fR with option \fB\-s\fR\.
+.
+.P
+\fB\-p\fR \fIPROMPT\fR Set prompt text
+.
+.br
+\fB\-i\fR \fITEXT\fR Pre fill buffer with \fITEXT\fR
+.
+.br
+\fB\-x\fR \fIX\fR Set x cursor position
+.
+.br
+Position starts from left\. Use a negative value to start from right\.
+.
+.br
+Use 0 for not changing the cursor position\.
+.
+.br
+\fB\-y\fR \fIY\fR Set y cursor position
+.
+.br
+Position starts from top\. Use a negative value to start from bottom\.
+.
+.br
+Use 0 for not changing the cursor position\.
+.
+.br
+\fB\-n\fR Append a newline to result string
+.
+.br
+\fB\-c\fR Clear the cursor line
+.
+.br
+\fB\-k\fR \fIKEY\fR Send \fIKEY\fR after writing line
+.
+.br
+\fB\-r\fR Redraw the window by resizing the PTY
+.
+.br
+\fB\-s\fR Save and restore the terminal using smcup/rmcup (see \fBtput\fR(1))
+.
+.br
+\fB\-A\fR \fITEXT\fR Append \fITEXT\fR to result
+.
+.br
+\fB\-P\fR \fITEXT\fR Prepend \fITEXT\fR to result
+.
+.P
+\fBrehandle\fR
+.
+.br
+Rehandle the current key
+.
+.P
+\fBrepeat\fR \fIon|off\fR
+.
+.br
+Enable repetition mode
+.
+.P
+\fBsignal\fR \fISIGNAL\fR
+.
+.br
+Send signal to program
+.
+.P
+\fBunbind\fR \fIKEY\fR\.\.\.
+.
+.br
+Unbind key
+.
+.P
+\fBunbound\fR [\fITYPE\fR\.\.\.] \fICOMMAND\fR\.\.\.
+.
+.br
+Specify action for unbound keys
+.
+.P
+\fITYPE\fR
+.
+.br
+\fBchar\fR characters
+.
+.br
+\fBsym\fR symbolic keys or modified key
+.
+.br
+\fBfunction\fR function keys
+.
+.br
+\fBmouse\fR mouse events
+.
+.br
+\fBany\fR char|sym|function [\fBdefault\fR]
+.
+.P
+\fICOMMAND\fR
+.
+.br
+Most of the time you want to use the following commands:
+.
+.P
+\fBpass\fR \- for passing the key as is to the program
+.
+.br
+\fBignore\fR \- for completely ignoring the key
+.
+.br
+\fBrehandle\fR \- for rehandling the key (in conjunction with preceding \fBmode\fR command)
+.
+.P
+\fBwrite\fR [\-r N] \fISTRING\fR\.\.\.
+.
+.br
+Send string to program
+.
+.P
+\fB\-r\fR \fIN\fR Repeat the string N times
+.
+.SH "KEYS"
+\fBSymbolic keys\fR
+.
+.br
+Up/Down/Left/Right, PageUp/PageDown, Home/End, Insert/Delete,
+.
+.br
+Escape, Space, Enter, Tab, Backspace, F1 \.\. F12
+.
+.P
+\fBModifiers\fR
+.
+.br
+\fBControl\fR: Control\-key, Ctrl\-key, C\-key, ^key
+.
+.br
+\fBAlt\fR: Alt\-key, A\-key, Meta\-key, M\-key
+.
+.br
+\fBShift\fR: Shift\-key, S\-key
+.
+.P
+\fBSpecial\fR

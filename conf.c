@@ -18,16 +18,20 @@ static int lex_args(char ***args, int *n) {
 
   *n = 0;
   if (*args == NULL) {
-    *args = malloc(MAX_ARGS * sizeof(char*));
-    s     = malloc(MAX_TOTAL_SIZE);
+    *args      = malloc(MAX_ARGS * sizeof(char*));
+    *(args)[0] = malloc(MAX_TOTAL_SIZE);
   }
-  else
-    s = (*args)[0];
+
+  s = (*args)[0];
 
   for (;;) {
     ttype = lex_lex();
-    if (ttype == LEX_TOKEN_END)
-      break;
+    if (ttype == LEX_TOKEN_END) {
+      if (*n > 0)
+        break;
+      else
+        continue;
+    }
 
     if (ttype == EOF) {
       if (lex_error_num) {
@@ -86,8 +90,10 @@ int read_conf_stream(FILE *fh) {
   }
 
 //END
-  free(args[0]);
-  free(args);
+  if (args) {
+    free(args[0]);
+    free(args);
+  }
   lex_destroy();
   context.current_mode = mode_restore;
   return ret;

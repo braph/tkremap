@@ -1,3 +1,4 @@
+#define  _GNU_SOURCE
 #include "tkremap.h"
 
 #include <stdio.h>
@@ -9,21 +10,30 @@
 #include <termios.h>
 #include <readline/readline.h>
 
+#define ACTION_WRITELINE 0
+#define ACTION_EVALUATE  1
+#define ACTION_CONFIRM   2
+
 #define SMCUP      "\033[?1049h"
 #define RMCUP      "\033[?1049l"
 #define CLEARLINE  "\033[K"
 #define STRLEN(S) (sizeof(S) - 1)
 
+// readline: "> "
+// confirm:  "? "
+// shell:    "$ "
+// tksh:     "(mode:)"
+// {'$', NULL,     "Shell mode"},
+
 int read_conf_string(const char *); // conf.h
 
-typedef struct cmd_readline_args { // cmd_readline.c + cmd_command.c
-  uint8_t do_newline       : 1;
-  uint8_t do_clear         : 1;
-  uint8_t do_refresh       : 1;
-  uint8_t do_config        : 1;
-  uint8_t do_savescreen    : 1;
-  uint8_t do_confirm       : 1;
-  uint8_t __PAD__          : 2;
+typedef struct cmd_readline_args {
+  uint8_t do_newline     : 1;
+  uint8_t do_clear       : 1;
+  uint8_t do_refresh     : 1;
+  uint8_t do_savescreen  : 1;
+  uint8_t action         : 2;
+  uint8_t __PAD__        : 2;
   int16_t x;
   int16_t y;
   char   *prompt;
@@ -66,7 +76,7 @@ static int confirm(cmd_readline_args *args) {
   for (;;)
     switch(getchar()) {
       case 'y': case 'Y': return 1;
-      case 'n': case 'N': return 0;
+      case 'n': case 'N':
       case EOF:           return 0;
     }
 }
@@ -113,36 +123,53 @@ COMMAND_CALL_FUNC(cmd_readline_call) {
   if (args->do_clear)
     write(STDOUT_FILENO, CLEARLINE, STRLEN(CLEARLINE));
 
-  if (args->do_confirm)
+  if (args->action == ACTION_CONFIRM)
     ret = confirm(args);
-  else
+  else if (args->action == ACTION_EVALUATE) {
+    char *old_prompt = args->prompt;
+
+    if (args->prompt)
+      asprintf(&args->prompt, "(mode: %s) %s", context.current_mode->name, old_prompt);
+    else
+      asprintf(&args->prompt, "(mode: %s) ", context.current_mode->name);
+
     line = readline(args->prompt);
+
+    free(args->prompt);
+    args->prompt = old_prompt;
+  }
+  else {
+    line = readline(args->prompt);
+  }
 
   set_input_mode();
   start_program_output();
   set_cursor(STDOUT_FILENO, old_y, old_x);
 
   if (line && strlen(line) > 0) {
-    if (args->do_config) {
+    char *prepend  = (args->prepend    ? args->prepend : "");
+    char *append   = (args->append     ? args->append  : "");
+    char  newline  = (args->do_newline ? '\r'          :  0);
+    char *old_line = line;
+    asprintf(&line, "%s%s%s%c", prepend, old_line, append, newline);
+
+    if (args->action == ACTION_EVALUATE) {
       if (! read_conf_string(line)) {
-        // if string is invalid re-invoke command 
+        // if command string is invalid, re-invoke command
         char *old_init = args->init;
-        args->init = line;
+        args->init = old_line;
         cmd_readline_call(cmd, key);
         args->init = old_init;
+        free(old_line);
         free(line);
         return 1;
       }
     }
     else {
-      if (args->prepend)
-        writes_to_program(args->prepend);
       writes_to_program(line);
-      if (args->append)
-        writes_to_program(args->append);
-      if (args->do_newline)
-        write(context.program_fd, "\r", 1);
     }
+
+    free(old_line);
     free(line);
   }
 
@@ -168,14 +195,15 @@ COMMAND_PARSE_FUNC(cmd_readline_parse) {
       case 'n': cmd_args->do_newline    = 1;
       case 'c': cmd_args->do_clear      = 1;
       case 'r': cmd_args->do_refresh    = 1;
-      case 'C': cmd_args->do_config     = 1;
       case 's': cmd_args->do_savescreen = 1;
-      case 'p': 
-          free(cmd_args->prompt);
-          cmd_args->prompt = strdup(opt->arg);
+      case '!': cmd_args->action        = ACTION_EVALUATE;
+      case '?': cmd_args->action        = ACTION_CONFIRM;
       case 'i':
           free(cmd_args->init);
           cmd_args->init = strdup(opt->arg);
+      case 'p': 
+          free(cmd_args->prompt);
+          cmd_args->prompt = strdup(opt->arg);
       case 'A': 
           free(cmd_args->append);
           cmd_args->append = strdup(opt->arg);
@@ -232,7 +260,6 @@ command_t command_readline = {
     {'y', "Y",      "Set y cursor position\n"
                     "Position starts from top. Use a negative value to start from bottom.\n"
                     "Use 0 for not changing the cursor position."},
-  //{'b', NULL,     "Set cursor to the bottom left (alias for -x 1 -y -1)"},
     {'n', NULL,     "Append a newline to result string"},
     {'c', NULL,     "Clear the cursor line"},
     {'k', "KEY",    "Send _KEY_ after writing line"},
@@ -240,6 +267,8 @@ command_t command_readline = {
     {'s', NULL,     "Save and restore the terminal using smcup/rmcup (see *tput*(1))"},
     {'A', "TEXT",   "Append _TEXT_ to result"},
     {'P', "TEXT",   "Prepend _TEXT_ to result"},
+    {'!', NULL,     "Execute resulting line as tkremap command"},
+    {'?', NULL,     "Read y/N and return result as return value"},
     {0,0,0}
   },
   .parse = &cmd_readline_parse,
