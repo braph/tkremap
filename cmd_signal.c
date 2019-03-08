@@ -48,7 +48,7 @@ static COMMAND_CALL_FUNC(call) {
 }
 
 static COMMAND_PARSE_FUNC(parse) {
-  int number;
+  #define number argc
 
   if (! (number = name2signal(args[0])))
     error_write("%s: %s", strerror(EINVAL), args[0]);

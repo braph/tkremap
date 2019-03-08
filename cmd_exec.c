@@ -55,13 +55,13 @@ static COMMAND_CALL_FUNC(cmd_exec_call) {
       dup2(infd, STDIN_FILENO);
 
     if (cmd_args->use_shell)
-      return execl("/bin/sh", "sh", "-c", cmd_args->args[0], (char *) 0), 0;
+      return execl("/bin/sh", "sh", "-c", cmd_args->args[0], NULL), 0;
     else
       return execvp(cmd_args->args[0], cmd_args->args), 0;
   }
   else {
     if (! cmd_args->background) {
-      int ret;
+      #define ret pid
       return waitpid(pid, &ret, 0), !WEXITSTATUS(ret);
     }
   }
@@ -92,13 +92,13 @@ static COMMAND_PARSE_FUNC(cmd_exec_parse) {
     #undef case
   }
 
-  cmd_args->args = charsdup(argc, args);
+  cmd_args->args = immutable_array(argc, args);
   return cmd_args;
 }
 
 static void cmd_exec_free(void *_arg) {
   cmd_exec_args *cmd_args = (cmd_exec_args*)_arg;
-  freeArrayNULL(cmd_args->args);
+  free(cmd_args->args);
   free(cmd_args->out);
   free(cmd_args->err);
   free(cmd_args->in);

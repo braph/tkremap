@@ -91,8 +91,8 @@ static COMMAND_PARSE_FUNC(cmd_repeat_parse) {
 command_t command_repeat = {
   COMMAND_T_INIT,
   .name  = "repeat",
-  .desc  = "Enable repetition mode"
-    ,.args  = (const char*[]) { "on|off", 0 },
+  .desc  = "Enable repetition mode",
+  .args  = (const char*[]) { "on|off", 0 },
   .call  = &cmd_repeat,
   .parse = &cmd_repeat_parse
 };

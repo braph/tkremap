@@ -10,10 +10,16 @@
 
 static int lex_args(char ***args, int *n) {
   int ttype;
-  int s = *n;
+  int slen;
+  char *s;
 
-  while (*n)
-    free((*args)[--(*n)]);
+  *n = 0;
+  if (*args == NULL) {
+    *args = malloc(128 * sizeof(char*));
+    s     = malloc(8192);
+  }
+  else
+    s = (*args)[0];
 
   for (;;) {
     ttype = lex_lex();
@@ -23,22 +29,16 @@ static int lex_args(char ***args, int *n) {
     if (ttype == EOF) {
       if (lex_error_num) {
         error_write("%s", lex_error());
-        while (*n)
-          free((*args)[--(*n)]);
-        free(*args);
-        *args = NULL;
         return -1;
       }
       break;
     }
 
-    ++*n;
-    if (*n >= s) {
-      s = *n + 32;
-      *args = realloc(*args, s * sizeof(char*));
-    }
-
-    (*args)[*n - 1] = strdup(lex_token());
+    ++(*n);
+    slen = strlen(lex_token());
+    strcpy(s, lex_token());
+    (*args)[*n - 1] = s;
+    s += (slen + 1);
   }
 
   return *n;
@@ -79,7 +79,8 @@ int read_conf_stream(FILE *fh) {
 
 //END
   free(cmdcall);
-  freeArray(args, nargs);
+  free(args[0]);
+  free(args);
   lex_destroy();
   context.current_mode = mode_restore;
   return ret;

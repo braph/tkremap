@@ -58,11 +58,10 @@ command_t* get_command(const char *name) {
 }
 
 command_call_t* command_parse(int argc, char **args, command_call_t *store) {
-  void   *arg = NULL;
+  void   *arg     = NULL;
   option *options = NULL;
-  char   *name = args_get_arg(&argc, &args, NULL);
-
-  command_t *cmd = get_command(name);
+  char   *name    = args_get_arg(&argc, &args, NULL);
+  command_t *cmd  = get_command(name);
   if (! cmd)
     return NULL;
 
@@ -101,8 +100,8 @@ ERROR_OR_END:
   if (arg) {
     if (! store)
       store = malloc(sizeof(command_call_t));
-    store->arg = arg;
-    store->command =cmd;
+    store->arg     = arg;
+    store->command = cmd;
     return store;
   }
 
@@ -128,7 +127,8 @@ commands_t* commands_parse(int argc, char *args[])
 
   unsigned i;
   unsigned offset_i = 0;
-  commands_t     *commands;
+  commands_t *commands;
+  #define  offset_size (offset_i + 1)
 
   offsets[0].offset = 0;
   offsets[0].length = 0;
@@ -153,15 +153,16 @@ commands_t* commands_parse(int argc, char *args[])
   offsets[offset_i].op = COMMAND_SEPARATOR_SEMICOLON;
 
   commands = malloc(sizeof(commands_t));
-  commands->size = (1 + offset_i) * 2 - 1;
-  commands->commands = calloc((1 + offset_i) * 2 - 1, sizeof(command_call_t));
+  commands->size = offset_size * 2 - 1;
+  commands->commands = calloc(offset_size * 2 - 1, sizeof(command_call_t));
 
-  for (i = -1; ++i <= offset_i;) {
+  for (i = -1; ++i < offset_size;) {
     if (! (command_parse(offsets[i].length, &args[offsets[i].offset], &commands->commands[i*2])))
       return 0; // TODO
 
-    if (i < offset_i)
+    if (i < offset_i) {
       commands->commands[i*2+1].command = (command_t*) (uintptr_t) offsets[i].op;
+    }
   }
 
   return commands;

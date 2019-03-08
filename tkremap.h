@@ -63,10 +63,10 @@ void command_call_free(command_call_t *);
 
 // === Bindings ===============================================================
 typedef struct binding_t {
-  int                  size;
-  struct binding_t   **bindings;
-  commands_t          *commands;
-  TermKeyKey           key; // at the bottom, important!
+  int                 size;
+  struct binding_t  **bindings;
+  commands_t         *commands;
+  TermKeyKey          key; // at the bottom, important!
 } binding_t;
 
 void       binding_free(binding_t *);

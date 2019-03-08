@@ -10,19 +10,21 @@ parser.add_argument('-v', default='conf')
 args = parser.parse_args()
 
 words = {
+    'bind':       'b',
+    'ignore':     'ig',
     'mode':       'mo',
     'mask':       'ma',
-    'bind':       'bi',
     'unbind':     'unbi',
     'unbound':    'unbo',
     'repeat':     'rep',
     'rehandle':   'reh',
     'readline':   'rea',
-    'write':      'wr',
+    'command':    'co',
+    'signal':     'si',
     'key':        'ke',
-    'ignore':     'ig',
     'pop':        'po',
-    'pop-mode':   'po'
+    'pop-mode':   'po',
+    'write':      'wr'
 }
 
 def strip_conf(s):
@@ -38,6 +40,9 @@ def strip_conf(s):
             continue
 
         l = re.sub(' +', ' ', l)
+        l = re.sub(' ?&& ?', '&&', l)
+        #l = re.sub(' ?\\\\; ?', '\\;', l)
+        l = re.sub(' (-[a-zA-Z]) ([a-zA-Z0-9]+)', ' \\1\\2', l)
 
         for search, replace in words.items():
             l = l.replace(search, replace)

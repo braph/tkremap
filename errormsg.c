@@ -27,6 +27,7 @@ void error_write(const char *fmt, ...) {
   va_end(ap);
 
   if (need_resize >= error_sz) {
+    free(error_msg);
     va_start(ap, fmt);
     error_sz = vasprintf(&error_msg, fmt, ap) + 1;
     va_end(ap);
@@ -34,16 +35,27 @@ void error_write(const char *fmt, ...) {
 }
 
 #define MAX 2048
+#define SEPERATOR ": "
+#define SEPERATOR_LEN (sizeof(SEPERATOR) - 1)
 void error_add(const char *fmt, ...) {
-  char *olderror = error_msg;
-  char temp[MAX];
+  // build "added error: "
+  char temp[MAX + SEPERATOR_LEN + 1];
   va_list ap;
   va_start(ap, fmt);
-  snprintf(temp, MAX, fmt, ap);
+  int templen = vsnprintf(temp, MAX, fmt, ap) + SEPERATOR_LEN;
   va_end(ap);
+  strcat(temp, SEPERATOR);
 
-  error_sz = asprintf(&error_msg, "%s: %s", temp, olderror) + 1;
-  free(olderror);
+  int oldlen  = strlen(error_msg);
+  int newsize = templen + oldlen + 1;
+
+  if (newsize>= error_sz) {
+    error_msg = realloc(error_msg, newsize);
+    error_sz  = newsize;
+  }
+
+  memmove(error_msg + templen, error_msg, oldlen + 1);
+  memcpy(error_msg, temp, templen);
 }
 
 void error_free() {

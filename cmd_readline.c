@@ -170,25 +170,21 @@ COMMAND_PARSE_FUNC(cmd_readline_parse) {
       case 'C': cmd_args->do_config     = 1;
       case 's': cmd_args->do_savescreen = 1;
       case 'p': 
-          if (cmd_args->prompt)
-            free(cmd_args->prompt);
+          free(cmd_args->prompt);
           cmd_args->prompt = strdup(opt->arg);
       case 'i':
-          if (cmd_args->init)
-            free(cmd_args->init);
+          free(cmd_args->init);
           cmd_args->init = strdup(opt->arg);
       case 'A': 
-          if (cmd_args->append)
-            free(cmd_args->append);
+          free(cmd_args->append);
           cmd_args->append = strdup(opt->arg);
       case 'P':
-          if (cmd_args->prepend)
-            free(cmd_args->prepend);
+          free(cmd_args->prepend);
           cmd_args->prepend = strdup(opt->arg);
       case 'k':
+          free(cmd_args->keyseq);
           if (! (cmd_args->keyseq = (char*) key_parse_get_code(opt->arg)))
             goto ERROR;
-
           cmd_args->keyseq = strdup(cmd_args->keyseq);
       case 'x':
           cmd_args->x = atoi(opt->arg);

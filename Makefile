@@ -1,14 +1,15 @@
-PROGNAME   = tkremap
-LIBS 		  = -lutil -ltermkey -lcurses -lpthread -lreadline
-PREFIX     = /usr
-STRIP      = strip
-CFLAGS    += -Wall
+PROGNAME     = tkremap
+LIBS 		     = -lutil -ltermkey -lcurses -lpthread -lreadline
+PREFIX       = /usr
+STRIP        = strip
+CFLAGS      += -Wall
+FREE_MEMORY ?= 0
 
 ifeq ($(DEBUG), 1)
 	CFLAGS += -g -DFREE_MEMORY=1 -DDEBUG=1
 	STRIP     = true
 else
-	CFLAGS += -O3
+	CFLAGS += -O3 -DFREE_MEMORY=$(FREE_MEMORY)
 endif
 
 ifeq ($(README), 1)

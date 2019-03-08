@@ -113,8 +113,9 @@ void keymode_free(keymode_t *km) {
 
 
 void command_call_free(command_call_t *call) {
-  if (call->command->free != NULL)
+  if (call->command->free != NULL) {
     call->command->free(call->arg);
+  }
 }
 
 void commands_free(commands_t *commands) {
@@ -122,6 +123,7 @@ void commands_free(commands_t *commands) {
     command_call_free(&commands->commands[i]);
     ++i; // uneven index means command separator (';', '&&')
   }
+  free(commands->commands);
 }
 
 // completely destroy a binding, including sub bindings
@@ -135,7 +137,7 @@ void binding_free(binding_t *binding) {
   for (int i = binding->size; i--; ) {
     binding_free(binding->bindings[i]);
   }
-
+  free(binding->bindings);
   free(binding);
 }
 
@@ -221,13 +223,8 @@ char* args_get_arg(int *argc, char ***argv, const char *name) {
 
 void* copyargs(int argc, char *args[], option *options) {
   command_args_t *cmdargs = malloc(sizeof(command_args_t));
-
-  if (cmdargs) {
-    cmdargs->argc = argc;
-    if (! (cmdargs->args = charsdup(argc, args)))
-      return free(cmdargs), NULL;
-  }
-
+  cmdargs->argc = argc;
+  cmdargs->args = immutable_array(argc, args);
   return cmdargs;
 }
 
@@ -239,7 +236,8 @@ void unpackargs(int *argc, char ***args, option** options, command_args_t* cmdar
 
 void deleteargs(void *_args) {
   command_args_t *args = (command_args_t*) _args;
-  freeArray(args->args, args->argc);
+  free(args->args);
+  free(args);
 }
 
 void handle_key(TermKeyKey *key) {

@@ -14,6 +14,7 @@
 #endif
 
 char** charsdup(int argc, char *args[]);
+char** immutable_array(int argc, char *args[]);
 
 #define streq(a,b) \
   (!strcmp(a,b))

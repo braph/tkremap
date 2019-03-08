@@ -35,32 +35,31 @@ int load_conf(const char *f) {
   if (strchr(f, '/'))
     return read_conf_file(f);
 
-  strcpy(file, f);
-
 again:
-  if (read_conf_file(file))
+  if (read_conf_file(f))
     return 1;
 
   if ((xdg_home = getenv("XDG_CONFIG_HOME"))) {
     sprintf(dir, "%s/%s", xdg_home, CFG_DIR_NAME);
-    if (load_conf_at(dir, file))
+    if (load_conf_at(dir, f))
       return 1;
   }
 
   if ((home = getenv("HOME"))) {
     sprintf(dir, "%s/.config/%s", home, CFG_DIR_NAME);
-    if (load_conf_at(dir, file))
+    if (load_conf_at(dir, f))
       return 1;
 
     sprintf(dir, "%s/.%s", home, CFG_DIR_NAME);
-    if (load_conf_at(dir, file))
+    if (load_conf_at(dir, f))
       return 1;
   }
 
   // try $file.CFG_EXTENSION
-  char *dot = strrchr(file, '.');
+  char *dot = strrchr(f, '.');
   if (dot == NULL || !streq(dot, "." CFG_EXTENSION)) {
     sprintf(file, "%s." CFG_EXTENSION, f);
+    f = file;
     goto again;
   }
 
