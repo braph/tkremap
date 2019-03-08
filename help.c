@@ -6,6 +6,9 @@
 #include <unistd.h>
 #include <string.h>
 
+#ifndef README
+#define README 0
+#endif
 #ifndef BOLD
 #define BOLD        "\033[1m"
 #endif
@@ -17,10 +20,6 @@
 #endif
 #ifndef ITALIC_END
 #define ITALIC_END  "\033[0m"
-#endif
-
-#ifndef README
-#define README 0
 #endif
 
 #if README
@@ -35,11 +34,17 @@ const char * const EXAMPLES =
   " Multiple commands can be specified using \\; or &&\n";
 #endif
 
-#define P(...) \
+#define P(STR) \
+  fputs(STR, stdout);
+
+#define PF(...) \
   printf(__VA_ARGS__)
 
-#define PA(FMT, ...) \
+#define PFA(FMT, ...) \
   printf(fill_attrs(FMT), ##__VA_ARGS__)
+
+#define PA(STR) \
+  fputs(fill_attrs(STR), stdout)
 
 #define ATTRS(...) \
   fill_attrs(__VA_ARGS__)
@@ -80,7 +85,7 @@ int help(const char *prog, const char *usage, const char *topic) {
   command_t *cmd = 0;
 
   if (! topic)
-    PA(usage, prog);
+    PFA(usage, prog);
   else if (streq(topic, "all"))
     print_all(prog, usage);
   else if (streq(topic, "keys"))
@@ -91,8 +96,8 @@ int help(const char *prog, const char *usage, const char *topic) {
     if ((cmd = get_command(topic)))
       help_command(cmd, 1);
     else {
-      PA(usage, prog);
-      P("%s: %s", E_UNKNOWN_CMD, topic);
+      PFA(usage, prog);
+      PF("%s: %s\n", E_UNKNOWN_CMD, topic);
     }
   }
 
@@ -100,7 +105,7 @@ int help(const char *prog, const char *usage, const char *topic) {
 }
 
 static void print_all(const char *prog, const char *usage) {
-  PA(usage, prog);
+  PFA(usage, prog);
   help_commands(1);
   help_keys();
 }
@@ -137,13 +142,13 @@ static char* get_option_string(command_t *cmd ) {
 
 static void help_command(command_t *cmd, int full) {
   if (! full) {
-    PA("*%-15s*", cmd->name);
+    PFA("*%-15s*", cmd->name);
     PA(firstline(cmd->desc));
-    PA("\n");
+    P("\n");
     return;
   }
 
-  PA("*%s*", cmd->name);
+  PFA("*%s*", cmd->name);
 
   if (cmd->opts) {
     P(" ");
@@ -153,11 +158,11 @@ static void help_command(command_t *cmd, int full) {
   if (cmd->args) {
     for (const char **arg = cmd->args; *arg; ++arg)
       if (**arg == '+')
-         PA(" _%s_...",    *arg + 1);
+         PFA(" _%s_...",    *arg + 1);
       else if (**arg == '*')
-         PA(" [_%s_...]",  *arg + 1);
+         PFA(" [_%s_...]",  *arg + 1);
       else
-         PA(" _%s_",       *arg);
+         PFA(" _%s_",       *arg);
   }
 
   P("\n");
@@ -173,10 +178,10 @@ static void help_command(command_t *cmd, int full) {
         max = (strlen(opt->meta) > max ? strlen(opt->meta) : max);
 
     for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt) {
-      PA(" *-%c*", opt->opt);
+      PFA(" *-%c*", opt->opt);
 
       if (opt->meta) {
-        PA(" _%s_", opt->meta);
+        PFA(" _%s_", opt->meta);
         pad_right(3 + max - strlen(opt->meta) - 1);
       }
       else
@@ -195,7 +200,7 @@ static void help_command(command_t *cmd, int full) {
 static
 char * indent(const char *str, int pad) {
   int   ind = -1;
-  char *res = calloc(1, strlen(str) * 2);
+  char *res = calloc(1, strlen(str) + 1024);
 
   for (int i = pad; i--; )
     res[++ind] =  ' ';
@@ -210,10 +215,10 @@ char * indent(const char *str, int pad) {
   return res;
 }
 
-// Replace markdown (*_) with attributes
+// Replace pseudo markdown (*_) with attributes
 static char* fill_attrs(const char *s) {
   int state = 1;
-  char *r = calloc(1, strlen(s) * 2);
+  char *r = calloc(1, strlen(s) + 1024);
 
   do {
     switch (*s) {

@@ -6,7 +6,6 @@ static COMMAND_CALL_FUNC(cmd_mask) {
 }
 
 command_t command_mask = {
-  COMMAND_T_INIT,
   .name  = "mask",
   .desc  = "Do not interprete the next keypress as a keybinding",
   .call  = &cmd_mask,
@@ -18,7 +17,6 @@ static COMMAND_CALL_FUNC(cmd_pass) {
 }
 
 command_t command_pass = {
-  COMMAND_T_INIT,
   .name  = "pass",
   .desc  = "Send the pressed key to the program",
   .call  = &cmd_pass,
@@ -30,7 +28,6 @@ static COMMAND_CALL_FUNC(cmd_ignore) {
 }
 
 command_t command_ignore = {
-  COMMAND_T_INIT,
   .name  = "ignore",
   .desc  = "Completely ignore the current pressed key",
   .call  = &cmd_ignore,
@@ -60,7 +57,6 @@ static COMMAND_PARSE_FUNC(cmd_mode_parse) {
 }
 
 command_t command_mode = {
-  COMMAND_T_INIT,
   .name  = "mode",
   .desc  = "Switch to _MODE_\n\nPass *-p* for previous mode",
   .args  = (const char*[]) { "MODE|-p", 0 },
@@ -89,7 +85,6 @@ static COMMAND_PARSE_FUNC(cmd_repeat_parse) {
 }
 
 command_t command_repeat = {
-  COMMAND_T_INIT,
   .name  = "repeat",
   .desc  = "Enable repetition mode",
   .args  = (const char*[]) { "on|off", 0 },
@@ -99,16 +94,17 @@ command_t command_repeat = {
 
 // === rehandle ===============================================================
 static COMMAND_CALL_FUNC(cmd_rehandle) {
-  if (context.rehandeled < REHANDLE_DEPTH_MAX)
-    ++context.rehandeled,
-      handle_key(key);
-  else
-    context.rehandeled = 0;
+  if (key) {
+    if (context.rehandeled < REHANDLE_DEPTH_MAX)
+      ++context.rehandeled,
+        handle_key(key);
+    else
+      context.rehandeled = 0;
+  }
   return 1;
 }
 
 command_t command_rehandle = {
-  COMMAND_T_INIT,
   .name  = "rehandle",
   .desc  = "Rehandle the current key",
   .call  = &cmd_rehandle,

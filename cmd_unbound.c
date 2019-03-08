@@ -56,9 +56,8 @@ static COMMAND_CALL_FUNC(cmd_unbound) {
         commands_free(km->unbound[f]);
         free(km->unbound[f]);
       }
-      else {
-        km->unbound[f] = commands[f];
-      }
+
+      km->unbound[f] = commands[f];
     }
   }
 
@@ -66,7 +65,6 @@ static COMMAND_CALL_FUNC(cmd_unbound) {
 }
 
 command_t command_unbound = {
-  COMMAND_T_INIT,
   .name  = "unbound",
   .desc  =
     "Specify action for unbound keys\n\n"

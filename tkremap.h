@@ -30,9 +30,6 @@ typedef const struct command_opt_t {
   const char *desc;
 } command_opt_t;
 
-#define COMMAND_T_INIT \
-  .args = NULL, .opts = NULL, \
-  .call = NULL, .free = NULL, .parse = NULL
 typedef struct command_t {
   const char     *name;
   const char     *desc;

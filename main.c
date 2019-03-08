@@ -151,6 +151,8 @@ int main(int argc, char *argv[]) {
     NON_ESCAPE:
     termkey_push_bytes(tk, (char*) &c, 1);
     if (termkey_getkey(tk, &key) == TERMKEY_RES_KEY) {
+      if (key.type == TERMKEY_TYPE_KEYSYM && key.code.sym == TERMKEY_SYM_DEL)
+        key.code.sym = TERMKEY_SYM_BACKSPACE;
       handle_key(&key);
       context.input_len = 0;
     }

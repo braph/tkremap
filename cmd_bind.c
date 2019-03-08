@@ -62,7 +62,6 @@ static COMMAND_CALL_FUNC(cmd_bind_call) {
 }
 
 command_t command_bind = {
-  COMMAND_T_INIT,
   .name  = "bind",
   .desc  = 
     "Bind _KEY_ to _COMMAND_\n"
