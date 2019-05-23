@@ -3,96 +3,103 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <error.h>
 
 lexer_t      *_current_lex;
 #define lex (*_current_lex)
+
+static int feed_buf();
 
 int lex_init(FILE *in) {
   _current_lex = calloc(1, sizeof(lexer_t));
   if (! _current_lex)
     return 0;
 
-  lex.in       = in;
-  lex.line     = 1;
-  lex.line_pos = 1;
-  lex.buf_pos  = -1;
-
+  lex.in = in;
+  feed_buf();
   return 1;
 }
 
 void lex_destroy() {
+  free(lex.buf);
   free(lex.token_buf);
   free(_current_lex);
   _current_lex = NULL;
 }
 
 /*
- * We're handling the line continuation character (\) here,
- * so we don't have to care about it in lex()
+ * Read whole configuration line.
  */
 static int feed_buf() {
-  int c1 = fgetc(lex.in);
+  int n = getline(&lex.buf, &lex.bufsz, lex.in);
+  if (n < 1)
+    return (lex.error_num = EOF);
 
-  if (c1 == EOF || c1 == 0)
-    return EOF;
+  lex.line_no++;
+  for (;;) {
+    if (lex.buf[--n] != '\n' || !n) // no newline || stripped size == 0
+      break;
 
-  if (c1 == '\\') {
-    int c2 = fgetc(lex.in);
+    if (lex.buf[n - 1] == '\\') {
+      int read_another_line = 1;
+      for (int i = n - 1; i-- ;) {
+        if (lex.buf[i] == '\\')
+          read_another_line = !read_another_line;
+        else
+          break;
+      }
 
-    if (c2 == '\n') {
-      lex.line++;
-      lex.line_pos = 1;
-      return feed_buf();
-    }
-    else if (c2 == EOF || c2 == 0) {
-      lex.buf[++lex.buf_pos] = c1;
-    }
-    else {
-      lex.buf[++lex.buf_pos] = c2;
-      lex.buf[++lex.buf_pos] = c1;
+      if (read_another_line) {
+        lex.buf[n] = '\0';   // kill newline
+        lex.buf[--n] = '\0'; // kill backslash
+
+        lex.line_no++;
+        char   *next_line = NULL;
+        size_t  next_line_bufsz = 0;
+        ssize_t next_line_sz;
+        if ((next_line_sz = getline(&next_line, &next_line_bufsz, lex.in)) < 1) {
+          free(next_line);
+          break;
+        }
+        else {
+          lex.buf = realloc(lex.buf, n + next_line_sz + 1);
+          strcat(lex.buf, next_line);
+          free(next_line);
+          n += next_line_sz;
+          lex.bufsz += next_line_sz;
+        }
+      }
     }
   }
-  else {
-    lex.buf[++lex.buf_pos] = c1;
-  }
 
-  return 1;
+  lex.c = lex.buf;
+  return *lex.c;
 }
 
+/* Returns current character or EOF */
 static int lex_peekc() {
-  if (lex.buf_pos == -1) {
-    if (feed_buf() == EOF)
-      return EOF;
-  }
-
-  return lex.buf[lex.buf_pos];
+  return (*lex.c ? *lex.c : feed_buf());
 }
 
+/* Returns current character or EOF, moves to next character */
 static int lex_getc() {
-  if (lex.buf_pos == -1) {
-    if (feed_buf() == EOF)
-      return EOF;
-  }
-
-  if (lex.buf[lex.buf_pos] == '\n')
-    lex.line++, lex.line_pos = 1;
-  else
-    lex.line_pos++;
-
-  return lex.buf[lex.buf_pos--];
+  int c = (*lex.c ? *lex.c : feed_buf());
+  lex.c++;
+  return c;
 }
 
-static void lex_ungetc(int c) {
-  lex.line_pos--;
-  lex.buf[++lex.buf_pos] = c;
-}
+#define lex_unget() \
+  (--lex.c)
 
-static void token_clear() {
-  lex.token_pos = 0;
-}
+#define issyntax(C) \
+  (!!strchr("'\";{}#|&", C))
 
-#define LEX_TOKEN_BUF_INC 1024
+#define token_clear() \
+  (lex.token_pos = 0)
+
+#define token_finalize() \
+  (token_append(0))
+
+#define LEX_TOKEN_BUF_INC 256
 static void token_append(int c) {
   if (lex.token_pos == lex.token_bufsz) {
     lex.token_bufsz += LEX_TOKEN_BUF_INC;
@@ -102,108 +109,79 @@ static void token_append(int c) {
   lex.token_buf[lex.token_pos++] = c;
 }
 
-static void token_finalize() {
-  token_append(0);
-}
-
-char* lex_token() {
-  return lex.token_buf;
-}
-
-static unsigned int read_hex() {
-  int  c;
-  unsigned int val = 0;
-
-  while (isxdigit((c = lex_getc())))
-    val = val * 16 + 
-      (c <= '9' ? c - '0'      :
-      (c <= 'F' ? c - 'A' + 10 :
-       c - 'a' + 10));
-  lex_ungetc(c);
-  return val;
-}
-
-static unsigned int read_oct() {
-  int  c;
-  unsigned int val = 0;
-
-  while ((c = lex_getc()) >= '0' && c < '8')
-    val = val * 8 + c - '0';
-  lex_ungetc(c);
-  return val;
-}
-
-static unsigned int read_dec() {
+static int read_double_quote() {
   int c;
   unsigned val = 0;
-
-  while (isdigit((c = lex_getc())))
-    val = val * 10 + c - '0';
-  lex_ungetc(c);
-  return val;
-}
-
-static int read_double_quote() {
-  int  c;
-
   token_clear();
-  while ((c = lex_getc()) != EOF) {
-    if (c == '"')
-      return token_finalize(), LEX_TOKEN_DOUBLE_QUOTE;
-    else if (c == '\\') {
+
+  for (;;) {
+    c = lex_getc();
+HAVE_CHAR:
+
+    if (c == '\\') {
       switch ((c = lex_getc())) {
-        case 'a':   token_append('\a'); break;
-        case 'b':   token_append('\b'); break;
-        case 't':   token_append('\t'); break;
-        case 'n':   token_append('\n'); break;
-        case 'v':   token_append('\v'); break;
-        case 'f':   token_append('\f'); break;
-        case 'r':   token_append('\r'); break;
-        case 'e':   token_append(033);  break;
-        case 'x':   token_append(read_hex()); break;
-        case '0':   token_append(read_oct()); break;
         case '1': case '2': case '3':
         case '4': case '5': case '6':
         case '7': case '8': case '9':
-                    token_append(read_dec()); break;
-        default:    token_append(c);
+          do {
+            val = val * 10 + c - '0';
+          } while (isdigit(c = lex_getc()));
+          token_append(val);
+          goto HAVE_CHAR;
+        case 'x':
+          while (isxdigit((c = lex_getc())))
+            val = val * 16 + 
+              (c <= '9' ? c - '0'      :
+              (c <= 'F' ? c - 'A' + 10 :
+               c - 'a' + 10));
+          token_append(val);
+          goto HAVE_CHAR;
+        case '0':
+          while ((c = lex_getc()) >= '0' && c < '8')
+            val = val * 8 + c - '0';
+          token_append(val);
+          goto HAVE_CHAR;
+        #define case break;case
+        case 'a': c = '\a';
+        case 'b': c = '\b';
+        case 't': c = '\t';
+        case 'n': c = '\n';
+        case 'v': c = '\v';
+        case 'f': c = '\f';
+        case 'r': c = '\r';
+        case 'e': c = '\033';
+        #undef case
       }
     }
-    else
-      token_append(c);
-  }
+    else if (c == '"') {
+      token_finalize();
+      return LEX_TOKEN_DOUBLE_QUOTE;
+    }
 
-  lex.error_num = LEX_ERROR_MISSING_DOUBLE_QUOTE;
-  return EOF;
+    if (c == EOF)
+      return (lex.error_num = LEX_ERROR_MISSING_DOUBLE_QUOTE);
+
+    token_append(c);
+  }
 }
 
 static int read_single_quote() {
   int c;
 
   token_clear();
-  while ((c = lex_getc()) != EOF) {
-    if (c == '\'')
-      return token_finalize(), LEX_TOKEN_SINGLE_QUOTE;
-    else if (c == '\\' && lex_peekc() == '\'')
-      token_append(lex_getc());
-    else
-      token_append(c);
+  for (;;) {
+    switch (c = lex_getc()) {
+      case '\'':
+        token_finalize();
+        return LEX_TOKEN_SINGLE_QUOTE;
+      case '\\':
+        c = lex_getc();
+    }
+
+    if (c == EOF)
+      return (lex.error_num = LEX_ERROR_MISSING_SINGLE_QUOTE);
+    token_append(c);
   }
-
-  lex.error_num = LEX_ERROR_MISSING_SINGLE_QUOTE;
-  return EOF;
-}
-
-static void consume_comment() {
-  int c;
-
-  while ((c = lex_getc()) != EOF)
-    if (c == '\n')
-      break;
-}
-
-static int issyntax(int c) {
-  return !!strchr("'\"\\;&", c);
 }
 
 static int read_word() {
@@ -216,7 +194,7 @@ static int read_word() {
       token_append(lex_getc());
     }
     else if (isspace(c) || issyntax(c)) {
-      lex_ungetc(c);
+      lex_unget();
       break;
     }
     else {
@@ -228,42 +206,76 @@ static int read_word() {
   return LEX_TOKEN_WORD;
 }
 
+#define SINGLE_TOK(C) do { \
+  token_clear(); \
+  token_append(C); \
+  token_finalize(); \
+} while(0)
+
 int lex_lex() {
-  if (lex_eof())
-    return EOF;
+  int c;
 
-  int c = lex_getc();
+  if (lex.unlexed) {
+    lex.unlexed = 0;
+    return lex.token_type;
+  }
+  else if (lex_eof())
+    return (lex.token_type = EOF);
 
-  switch (c) {
-    case '"':   return read_double_quote();
-    case '\'':  return read_single_quote();
-    case ';':
-    case '\n':  return LEX_TOKEN_END;
-    case '#':   consume_comment(); /* fall through */
-    case ' ':
-    case '\t':  return lex_lex();
-    case EOF:   lex.is_eof = 1;
-                return EOF;
-    default:    lex_ungetc(c);
-                return read_word();
+  while (1) {
+    switch (c = lex_getc()) {
+      case '{':  
+        SINGLE_TOK('{');
+        return (lex.token_type = LEX_TOKEN_BLOCK_BEG);
+
+      case '}':  
+        SINGLE_TOK('}');
+        return (lex.token_type = LEX_TOKEN_BLOCK_END);
+
+      case '&': 
+        if (lex_getc() == '&')
+          return (lex.token_type = LEX_TOKEN_AND);
+        else
+          return LEX_ERROR_UNEXPECTED_SYMBOL;
+
+      case '|': 
+        if (lex_getc() == '|')
+          return (lex.token_type = LEX_TOKEN_OR);
+        else
+          return LEX_ERROR_UNEXPECTED_SYMBOL;
+
+      case '"':   return (lex.token_type = read_double_quote());
+      case '\'':  return (lex.token_type = read_single_quote());
+      case ';':   return (lex.token_type = LEX_TOKEN_SEMICOLON);
+      case '\n':  return (lex.token_type = LEX_TOKEN_NEW_LINE);
+      case '#':   while ((c = lex_getc()) != '\n' && c != EOF); break; /* fall through */
+      case ' ':
+      case '\t':  break;
+      case EOF:   return (lex.token_type = lex.error_num = EOF);
+      default:    lex_unget();
+                  return (lex.token_type = read_word());
+    }
   }
 }
 
-int lex_eof() {
-  return (lex.is_eof || lex.error_num);
+int   lex_char_pos()  { return (lex.c - lex.buf); }
+int   lex_line_no()   { return lex.line_no;       }
+char* lex_line()      { return lex.buf;           }
+char* lex_token()     { return lex.token_buf;     }
+void  lex_unlex()     { lex.unlexed = 1;          }
+int   lex_eof()       { return lex.error_num;     }
+
+int lex_errorno() {
+  return (lex.error_num != EOF ? lex.error_num : 0);
 }
 
 char *lex_error() {
-  snprintf(lex.error_buf, LEX_ERROR_BUF_SZ, "%d:%d: ", lex.line, lex.line_pos);
-
   switch (lex.error_num) {
-    case 0:
-      return strcat(lex.error_buf, strerror(0));
-    case LEX_ERROR_MISSING_SINGLE_QUOTE:
-      return strcat(lex.error_buf, "unterminated single quote");
-    case LEX_ERROR_MISSING_DOUBLE_QUOTE:
-      return strcat(lex.error_buf, "unterminated double quote");
-    default:
-      return strcat(lex.error_buf, "error in lexer");
+    case LEX_ERROR_MISSING_SINGLE_QUOTE: return "unterminated single quote";
+    case LEX_ERROR_MISSING_DOUBLE_QUOTE: return "unterminated double quote";
+    case LEX_ERROR_UNEXPECTED_SYMBOL:    return "unexpected symbol";
+    case EOF:
+    case 0:  return strerror(0);
+    default: return NULL;
   }
 }

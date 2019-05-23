@@ -3,15 +3,15 @@
 #include <string.h>
 #include <unistd.h>
 
-typedef struct __attribute__((__packed__)) cmd_write_args {
-  short repeat;
-  char  string[1];
+typedef struct __packed cmd_write_args {
+  uint16_t repeat;
+  char     string[1];
 } cmd_write_args;
 
 static COMMAND_CALL_FUNC(call) {
   cmd_write_args *arg = (cmd_write_args*) cmd->arg;
 
-  for (int i = arg->repeat; i--; )
+  for (int i = arg->repeat; i--;)
     writes_to_program(arg->string);
 
   return 1;
@@ -25,7 +25,7 @@ static COMMAND_PARSE_FUNC(parse) {
   for (option *opt = options; opt->opt; ++opt) {
     if (opt->opt == 'r')
       if ((repeat = atoi(opt->arg)) <= 0)
-        return error_write("%s: %s", strerror(EINVAL), opt->arg), NULL;
+        return error_set(EINVAL, opt->arg), NULL;
   }
 
   for (i = argc; i--;)
@@ -40,14 +40,13 @@ static COMMAND_PARSE_FUNC(parse) {
   return (void*) cmd_args;
 }
 
-command_t command_write = {
-  .name  = "write",
-  .desc  = "Send string to program",
-  .args  = (const char*[]) { "+STRING", 0 },
-  .opts  = (const command_opt_t[]) {
-    { 'r', "N", "Repeat the string N times" },
-    {0,0,0}
-  },
+const command_t command_write = {
+  .name  = "write"
+    "\0Send string to program",
+  .args  = "+STRING\0",
+  .opts  = OPTIONS(
+    OPTION('r', "N", "Repeat the string N times")
+  ),
   .parse = &parse,
   .call  = &call,
   .free  = &free

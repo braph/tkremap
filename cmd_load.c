@@ -1,6 +1,5 @@
 #include "tkremap.h"
 
-#include <err.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,59 +7,60 @@
 #define CFG_DIR_NAME  "tkremap"
 #define CFG_EXTENSION "conf"
 
-static
-int load_conf_at(const char *dir, const char *f) {
-  int  ret = 0;
-  char oldcwd[4096];
+static int load_conf_at(const char *dir, const char *file) {
+  int   ret = 0;
+  char  filebuf[PATH_MAX * 2 + 2];
+  FILE *fh;
 
-  if (! getcwd(oldcwd, sizeof(oldcwd)) || chdir(dir))
-    return 0;
+  snprintf(filebuf, sizeof(filebuf), "%s/%s", dir, file);
 
-  if (! access(f, F_OK))
-    ret = read_conf_file(f);
+  if ((fh = fopen(filebuf, "r"))) {
+    ret = read_conf_stream(fh);
+    fclose(fh);
+  }
   else
-    error_write("%s: %s", strerror(ENOENT), f);
+    error_set(errno, filebuf);
 
-  if (chdir(oldcwd))
-    warn("chdir(%s)", oldcwd);
+  if (ret)
+    debug("Loaded %s/%s", dir, filebuf);
 
   return ret;
 }
 
-int load_conf(const char *f) {
-  char dir[8192];
-  char file[4096];
-  const char *xdg_home, *home;
+int load_conf(const char *file) {
+  char dirbuf[PATH_MAX];
+  char filebuf[PATH_MAX];
+  const char *home;
 
-  if (strchr(f, '/'))
-    return read_conf_file(f);
+  // It's not a sole filename, do not try to load it from $HOME etc.
+  if (strchr(file, '/'))
+    return read_conf_file(file);
 
-again:
-  if (read_conf_file(f))
+AGAIN:
+  if (read_conf_file(file))
     return 1;
 
-  if ((xdg_home = getenv("XDG_CONFIG_HOME"))) {
-    sprintf(dir, "%s/%s", xdg_home, CFG_DIR_NAME);
-    if (load_conf_at(dir, f))
+  if ((home = getenv("XDG_CONFIG_HOME"))) {
+    snprintf(dirbuf, sizeof(dirbuf), "%s/%s", home, CFG_DIR_NAME);
+    if (load_conf_at(dirbuf, file))
       return 1;
   }
 
   if ((home = getenv("HOME"))) {
-    sprintf(dir, "%s/.config/%s", home, CFG_DIR_NAME);
-    if (load_conf_at(dir, f))
+    snprintf(dirbuf, sizeof(dirbuf), "%s/.config/%s", home, CFG_DIR_NAME);
+    if (load_conf_at(dirbuf, file))
       return 1;
 
-    sprintf(dir, "%s/.%s", home, CFG_DIR_NAME);
-    if (load_conf_at(dir, f))
+    snprintf(dirbuf, sizeof(dirbuf), "%s/.%s", home, CFG_DIR_NAME);
+    if (load_conf_at(dirbuf, file))
       return 1;
   }
 
   // Try $file.CFG_EXTENSION
-  char *dot = strrchr(f, '.');
-  if (dot == NULL || !streq(dot, "." CFG_EXTENSION)) {
-    sprintf(file, "%s." CFG_EXTENSION, f);
-    f = file;
-    goto again;
+  if (! strsuffix(file,             2+("%s." CFG_EXTENSION))) {
+    snprintf(filebuf, sizeof(filebuf), "%s." CFG_EXTENSION, file);
+    file = filebuf;
+    goto AGAIN;
   }
 
   return 0;
@@ -74,17 +74,17 @@ static COMMAND_PARSE_FUNC(parse) {
   return (void*) strdup(args[0]);
 }
 
-command_t command_load = {
-  .name  = "load",
-  .desc  = "Load configuration file\n"
+const command_t command_load = {
+  .name  = "load"
+    "\0Load configuration file\n\n"
     "If file is a sole filename it will be\n"
-    "searched in the following places:\n"
-    " - $PWD\n"
-    " - $XDG\\_CONFIG\\_HOME/" CFG_DIR_NAME "\n"
-    " - $HOME/.config/" CFG_DIR_NAME "\n"
-    " - $HOME/." CFG_DIR_NAME "\n\n"
-    "The extension ." CFG_EXTENSION " will be added if missing",
-  .args  = (const char*[]) { "FILE", 0 },
+    "searched in the following directories:\n"
+    " - *$PWD*\n"
+    " - *$XDG\\_CONFIG\\_HOME*/" CFG_DIR_NAME "\n"
+    " - *$HOME*/.config/"        CFG_DIR_NAME "\n"
+    " - *$HOME*/."               CFG_DIR_NAME "\n"
+    "The extension *." CFG_EXTENSION "* will be added if missing",
+  .args  = "FILE\0",
   .call  = &call,
   .parse = &parse,
   .free  = &free

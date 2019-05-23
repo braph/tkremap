@@ -2,17 +2,18 @@
 #include "aliases.h"
 #include "errormsg.h"
 #include "commands.h"
-
-// TODO
+#include "lexer.h"
 
 extern command_t
   command_write,
   command_unbound,
   command_unbind,
+  command_suspend,
   command_signal,
-  command_readline,
-  command_rehandle,
   command_repeat,
+  command_rehandle,
+  command_redraw_method,
+  command_readline,
   command_pass,
   command_mode,
   command_mask,
@@ -20,15 +21,23 @@ extern command_t
   command_key,
   command_ignore,
   command_exec,
-  command_bind;
+#if DEBUG
+  command_debug,
+#endif
+  command_bind,
+  command_group;
 
 command_t* commands[] = {
+  // Keep `#define COMMANDS_SIZE` (commands.h) updated!
+  // List must remain sorted!
   &command_write,
   &command_unbound,
   &command_unbind,
+  &command_suspend,
   &command_signal,
   &command_repeat,
   &command_rehandle,
+  &command_redraw_method,
   &command_readline,
   &command_pass,
   &command_mode,
@@ -37,43 +46,122 @@ command_t* commands[] = {
   &command_key,
   &command_ignore,
   &command_exec,
-  &command_bind
+#if DEBUG
+  &command_debug,
+#endif
+  &command_bind,
+  &command_group // sorting exception '{'
 };
-int commands_size = (sizeof(commands)/sizeof(commands[0]));
 
-command_t* get_command(const char *name) {
+const command_t* get_command(const char *name) {
   command_t *cmd = NULL;
 
-  for (int i = commands_size; i--; )
-    if (strprefix(commands[i]->name, name)) {
-      if (cmd)
-        return error_write("%s: %s", E_AMBIGIOUS_CMD, name), NULL;
+  for (int i = COMMANDS_SIZE; i--;)
+    if (cmd) {
+      if (strprefix(commands[i]->name, name))
+        return error_set_errno(E_AMBIGIOUS_CMD), NULL;
       else
-        cmd = commands[i];
+        break;
+    }
+    else if (strprefix(commands[i]->name, name)) {
+      cmd = commands[i];
     }
 
   if (! cmd)
-    error_write("%s: %s", E_UNKNOWN_CMD, name);
+    error_set_errno(E_UNKNOWN_CMD);
 
   return cmd;
 }
 
-command_call_t* command_parse(int argc, char **args, command_call_t *store) {
-  void   *arg     = NULL;
-  option *options = NULL;
-  char   *name    = args_get_arg(&argc, &args, NULL);
+/* Parse a command.
+ *
+ * Return a `command_call_t*` type.
+ *
+ * A preallocated `command_call_t` can be passed using parameter `store`.
+ *
+ * This function expects to find a LEX_TOKEN_WORD or a LEX_TOKEN_BLOCK_BEG
+ * token when calling lex_lex().
+ *
+ * If (a command has been found):
+ *    If (command is a 'simple' command):
+ *        Build argv, that is:
+ *        Read all tokens until a terminator (';', '&&', '||', '}', '\n', 'EOF')
+ *        was found.
+ *        Invoke commands parse function
+ *    If (command is a 'advanced' command):
+ *        Do not build argv, instead invoke commands parse function.
+ *
+ * After this function returns, the next call to lex_lex() will point to
+ * the terminating token.
+ */
 
-  // Resolve alias first
-  char **aliased_argv = alias_resolve(name, &argc, args);
-  if (aliased_argv) {
-    command_call_t* ret = command_parse(argc, aliased_argv, store);
-    freeArray(aliased_argv, argc);
-    return ret;
+#define COMMAND_MAX_ARGS 1024
+
+command_call_t* command_parse(void *lexer, command_call_t *store) {
+  ___("command_parse");
+  int     argc     = 0;
+  int     argc_old = 0;
+  char   *args_data[COMMAND_MAX_ARGS];
+  char  **args     = args_data;
+  void   *cmdarg   = NULL;
+  option *options  = NULL;
+
+  // Expect TOKEN_WORD (command name) or TOKEN_BLOCK_BEG '{' (command group)
+  int ttype = lex_lex();
+  if (ttype != LEX_TOKEN_WORD && ttype != LEX_TOKEN_BLOCK_BEG) {
+    debug("command_parse(): first token != WORD,BLOCK_BEG is: %s", LEX_TOK2STR(ttype));
+    error_set(E_SYNTAX, "Expected <COMMAND> or '{'");
+    return NULL;
   }
 
-  command_t *cmd  = get_command(name);
-  if (! cmd)
+  // Find matching command
+  const char      *name = lex_token();
+  const command_t *cmd  = get_command(name);
+  if (! cmd) {
+    debug("command_parse(): command not found: %s", name);
+    error_add(name);
     return NULL;
+  }
+  debug("command_parse(): command is %s", cmd->name);
+
+  // Special cases: '{', 'bind', 'unbound':
+  //  These commands do not need argc/argv
+  if (cmd == &command_bind || cmd == &command_group || cmd == &command_unbound) {
+    cmdarg = cmd->parse(0, NULL, NULL, &cmd);
+    goto ERROR_OR_END_WITHOUT_FREE;
+  }
+
+  // Is a normal command, build argc/argv:
+  // Command arguments end in ';', '&&', '||', '\n', '}' (in case of block)
+  for (;;) {
+    ttype = lex_lex();
+    debug("command_parse(): type is %s", LEX_TOK2STR(ttype));
+
+    switch (ttype) {
+      case LEX_TOKEN_WORD:
+        if (argc == COMMAND_MAX_ARGS) {
+          error_set(E2BIG, "Max length is " TO_STR(COMMAND_MAX_ARGS));
+          goto ERROR_OR_END;
+        }
+
+        args[argc++] = strdup(lex_token());
+        break;
+
+      case EOF:
+      case LEX_TOKEN_OR:
+      case LEX_TOKEN_AND:
+      case LEX_TOKEN_NEW_LINE:
+      case LEX_TOKEN_BLOCK_END:
+      case LEX_TOKEN_SEMICOLON:
+        lex_unlex();
+        goto BREAK_LOOP;
+
+      default: debug("command_parse(): default?");
+    }
+  }
+
+BREAK_LOOP:
+  debugArray(args, argc);
 
   if (cmd->opts != NULL) {
     int  i = 0;
@@ -85,13 +173,14 @@ command_call_t* command_parse(int argc, char **args, command_call_t *store) {
     }
     optstr[i] = 0;
 
+    argc_old = argc;
     if (! get_options(&argc, &args, optstr, &options))
-      return NULL;
+      goto ERROR_OR_END;
   }
 
   if (cmd->args == NULL) {
     if (argc > 0) {
-      error_write("spare arguments");
+      error_set_errno(E_SPARE_ARGS);
       goto ERROR_OR_END;
     }
   }
@@ -100,80 +189,31 @@ command_call_t* command_parse(int argc, char **args, command_call_t *store) {
       goto ERROR_OR_END;
 
   if (cmd->parse != NULL)
-    arg = cmd->parse(argc, args, options);
+    cmdarg = cmd->parse(argc, args, options, &cmd);
   else
-    arg = (void*) 1;
+    cmdarg = (void*) 1;
 
 ERROR_OR_END:
   free(options);
 
-  if (arg) {
+  if (argc_old)
+    argc = argc_old;
+
+  while (argc--)
+    free(args_data[argc]);
+
+ERROR_OR_END_WITHOUT_FREE:
+  if (cmdarg) {
     if (! store)
-      store = malloc(sizeof(command_call_t));
-    store->arg     = arg;
+      store = calloc(1, sizeof(command_call_t));
+    store->arg     = cmdarg;
     store->command = cmd;
     return store;
+  }
+  else {
+    error_add(cmd->name);
   }
 
   return NULL;
 }
 
-#define EQ_ANDAND(S) (S[0] ==  '&' && S[1] == '&' && S[2] == 0)
-#define EQ_SEMICO(S) (S[0] == '\\' && S[1] == ';' && S[2] == 0)
-
-// TODO: free if failed
-/* parse multiple commands, append to commands */
-#define COMMANDS_MAX 1024
-commands_t* commands_parse(int argc, char *args[])
-{
-  if (! argc)
-    return NULL;
-
-  struct {
-    uint32_t offset : 18;
-    uint32_t length : 12;
-    uint32_t op     :  2;
-  } offsets[COMMANDS_MAX];
-
-  unsigned i;
-  unsigned offset_i = 0;
-  commands_t *commands;
-  #define  offset_size (offset_i + 1)
-
-  offsets[0].offset = 0;
-  offsets[0].length = 0;
-  for (i = 0; i < argc; ++i) {
-    int op = -1;
-    if (streq(args[i], "\\;"))
-      op = COMMAND_SEPARATOR_SEMICOLON;
-    else if (streq(args[i], "&&"))
-      op = COMMAND_SEPARATOR_AND;
-    else
-      offsets[offset_i].length++;
-
-    if (op >= 0) {
-      offsets[offset_i].op = op;
-      if (offsets[offset_i].length == 0)
-        return NULL;
-      ++offset_i;
-      offsets[offset_i].offset = ++i;
-      offsets[offset_i].length = 1;
-    }
-  }
-  offsets[offset_i].op = COMMAND_SEPARATOR_SEMICOLON;
-
-  commands = malloc(sizeof(commands_t));
-  commands->size = offset_size * 2 - 1;
-  commands->commands = calloc(offset_size * 2 - 1, sizeof(command_call_t));
-
-  for (i = -1; ++i < offset_size;) {
-    if (! (command_parse(offsets[i].length, &args[offsets[i].offset], &commands->commands[i*2])))
-      return 0; // TODO
-
-    if (i < offset_i) {
-      commands->commands[i*2+1].command = (command_t*) (uintptr_t) offsets[i].op;
-    }
-  }
-
-  return commands;
-}

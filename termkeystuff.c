@@ -1,19 +1,18 @@
 #include "termkeystuff.h"
-#include "errormsg.h"
 #include "tkremap.h"
 
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
-#include <term.h>
 #include <curses.h>
+#include <term.h>
 
 TermKey *tk;
 
-typedef struct lookup_t {
-  TermKeySym   sym;
-  const char   *sequence;
+typedef struct __packed lookup_t {
+  char          *sequence;
+  TermKeySym     sym;
 } lookup_t;
 
 static lookup_t *normal_lookup;
@@ -23,8 +22,8 @@ static lookup_t *shift_lookup;
 static int       shift_lookup_size;
 
 // Stolen and adapted from libtermkey/driver-ti.c 
-static struct {
-  const char *funcname;
+static const struct __packed {
+  char *funcname;
   TermKeySym sym;
 } funcs[] = {
   { "backspace", TERMKEY_SYM_BACKSPACE },
@@ -71,13 +70,13 @@ static struct {
   { "up",        TERMKEY_SYM_UP        }
 //{ NULL }
 };
+#define FUNCS_SIZE (sizeof(funcs) / sizeof(funcs[0]))
 
 // Stolen and adapted from libtermkey/driver-ti.c 
-  static
-int funcname2keysym(const char *funcname, TermKeySym *symp)
+static int funcname2keysym(const char *funcname, TermKeySym *symp)
 {
   int start = 0;
-  int end   = sizeof(funcs)/sizeof(funcs[0]);
+  int end   = FUNCS_SIZE;
 
   while (1) {
     int i   = (start+end) / 2;
@@ -111,7 +110,7 @@ const char* get_sequence_for_sym(lookup_t *table, int size, TermKeySym sym) {
 static 
 void table_add_key_sym(lookup_t *table, int *size, TermKeySym sym, const char *sequence) {
   table[*size].sym      = sym;
-  table[*size].sequence = sequence;
+  table[*size].sequence = strdup(sequence);
   ++(*size);
 }
 
@@ -120,10 +119,13 @@ int load_terminfo()
 {
   int i;
   TermKeySym sym;
-  normal_lookup = malloc(sizeof(funcs)/sizeof(funcs[0]) * sizeof(lookup_t));
+  lookup_t normal[FUNCS_SIZE + 5]; // Will be copied
+  lookup_t  shift[FUNCS_SIZE + 5]; // to heap later
+
+  normal_lookup = normal;
+  shift_lookup  = shift;
   normal_lookup_size = 0;
-  shift_lookup  = malloc(sizeof(funcs)/sizeof(funcs[0]) * sizeof(lookup_t));
-  shift_lookup_size = 0;
+  shift_lookup_size  = 0;
 
   if (setupterm(NULL, 1, NULL) != OK)
     return 0;
@@ -132,128 +134,160 @@ int load_terminfo()
   {
     // Only care about the key_* constants
     const char *name = strfnames[i];
-    if (strncmp(name, "key_", 4) != 0)
+    if (name[0] != 'k' || name[1] != 'e' || name[2] != 'y' || name[3] != '_')
       continue;
     if (strcmp(name + 4, "mouse") == 0)
       continue;
 
-    if(funcname2keysym(name + 4, &sym)) {
-      if(sym == TERMKEY_SYM_NONE)
+    if (funcname2keysym(name + 4, &sym)) {
+      if (sym == TERMKEY_SYM_NONE)
         continue;
 
       const char *value = tigetstr(strnames[i]);
       if (value == 0)
         continue;
 
-      normal_lookup[normal_lookup_size].sym = sym;
-      normal_lookup[normal_lookup_size].sequence = value;
-      ++normal_lookup_size;
+      table_add_key_sym(normal_lookup, &normal_lookup_size, sym, value);
+      //normal_lookup[normal_lookup_size].sym = sym;
+      //normal_lookup[normal_lookup_size].sequence = strdup(value);
+      //++normal_lookup_size;
     }
     else if (funcname2keysym(name + 5, &sym)) {
-      if(sym == TERMKEY_SYM_NONE)
+      if (sym == TERMKEY_SYM_NONE)
         continue;
 
       const char *value = tigetstr(strnames[i]);
       if (value == 0)
         continue;
 
-      shift_lookup[shift_lookup_size].sym = sym;
-      shift_lookup[shift_lookup_size].sequence = value;
-      ++shift_lookup_size;
+      table_add_key_sym(shift_lookup, &shift_lookup_size, sym, value);
+      //shift_lookup[shift_lookup_size].sym = sym;
+      //shift_lookup[shift_lookup_size].sequence = strdup(value);
+      //++shift_lookup_size;
     }
   }
 
   table_add_key_sym(normal_lookup, &normal_lookup_size, TERMKEY_SYM_ENTER,  "\x0D");
   table_add_key_sym(normal_lookup, &normal_lookup_size, TERMKEY_SYM_DEL,    "\x7F");
   table_add_key_sym(normal_lookup, &normal_lookup_size, TERMKEY_SYM_ESCAPE, "\x1B");
-  // CTRL+Space
+  // TODO: Add CTRL+Space
 
-  normal_lookup = realloc(normal_lookup, normal_lookup_size * sizeof(lookup_t));
-  shift_lookup  = realloc(shift_lookup,  shift_lookup_size * sizeof(lookup_t));
+  normal_lookup = memdup(normal_lookup, normal_lookup_size * sizeof(lookup_t));
+  shift_lookup  = memdup(shift_lookup,  shift_lookup_size  * sizeof(lookup_t));
+
+  del_curterm(cur_term);
+  return 1;
+}
+
+#define TERMKEY_STRPKEY(STR, KEY, FLAGS) \
+  ((last_char = termkey_strpkey(tk, STR, KEY, FLAGS)) != NULL && *last_char==0)
+
+#define TOUPPER_SIMPLE(CH) \
+  (CH - 32)
+
+#define TOLOWER_SIMPLE(CH) \
+  (CH + 32)
+
+#define ISLOWER_ASCII(CH) \
+  (CH >= 'a' && CH <= 'z')
+
+#define ISUPPER_ASCII(CH) \
+  (CH >= 'A' && CH <= 'Z')
+
+int parse_key(const char *def, TermKeyKey *key) {
+  const char *last_char;
+  const int fmts[] = {
+    0, // Default
+
+    // Try A-k instead of M-k
+    TERMKEY_FORMAT_ALTISMETA,                       // A-
+    TERMKEY_FORMAT_ALTISMETA|TERMKEY_FORMAT_LONGMOD,// Meta, Alt
+    TERMKEY_FORMAT_LONGMOD,                         // Shift-, Control-, Meta-
+    TERMKEY_FORMAT_LONGMOD|TERMKEY_FORMAT_LOWERMOD, // shift-, control-, 
+
+    // Try ^K
+    TERMKEY_FORMAT_CARETCTRL
+  };
+
+  for (int i = -1; ++i < sizeof(fmts)/sizeof(fmts[0]);)
+    if (TERMKEY_STRPKEY(def, key, fmts[i]))
+      goto RETURN;
+
+  /*
+  // Try default
+  if (TERMKEY_STRPKEY(def, key, 0))
+    goto RETURN;
+
+  // Try A-k instead of M-k
+  if (TERMKEY_STRPKEY(def, key, TERMKEY_FORMAT_ALTISMETA))
+    goto RETURN;
+
+  // Try Meta-k, Alt-k instead of M-k, A-k
+  if (TERMKEY_STRPKEY(def, key, TERMKEY_FORMAT_ALTISMETA|TERMKEY_FORMAT_LONGMOD))
+    goto RETURN;
+
+  // Try Shift-k, Control-k instead of S-k, C-k
+  if (TERMKEY_STRPKEY(def, key, TERMKEY_FORMAT_LONGMOD))
+    goto RETURN;
+
+  // Try shift-k, control-k instead of Shift-k, Ctrl-k
+  if (TERMKEY_STRPKEY(def, key, TERMKEY_FORMAT_LONGMOD|TERMKEY_FORMAT_LOWERMOD))
+    goto RETURN;
+
+  // Try ^K
+  if (TERMKEY_STRPKEY(def, key, TERMKEY_FORMAT_CARETCTRL))
+    goto RETURN;
+  */
+
+  // Try ^k (make lower char to upper)
+  if (def[0] == '^' && ISLOWER_ASCII(def[1]) && def[2] == 0) {
+    char def_upper[3] = { '^', TOUPPER_SIMPLE(def[1]), 0 };
+    if (TERMKEY_STRPKEY(def_upper, key, TERMKEY_FORMAT_CARETCTRL))
+      goto RETURN;
+  }
+
+  error_set_errno(E_INVALID_KEY);
+  return 0;
+
+RETURN:
+  /* FIX:
+   * When parsing 
+   *  `Shift-<LOWER>` (or `Meta-Shift-<LOWER>` etc.)
+   * key.code.codepoint will be left lowercase.
+   * This will confuse `get_key_code()`, causing an invalid keycode to be returned.
+   */
+
+  if (key->modifiers & TERMKEY_KEYMOD_SHIFT &&
+      ISLOWER_ASCII(key->code.codepoint))
+    key->code.codepoint = TOUPPER_SIMPLE(key->code.codepoint);
+
+  /* FIX:
+   * When parsing
+   *  `Ctrl + <Upper Char>` or `Ctrl + Shift + <Char>`
+   * key.code.codepoint will be uppercase.
+   * This will confuse `get_key_code()`, causing an invalid keycode to be returned.
+   * (There are only uppercase Ctrl combinations)
+   */
+
+  if (key->modifiers & TERMKEY_KEYMOD_CTRL &&
+      ISUPPER_ASCII(key->code.codepoint))
+    key->code.codepoint = TOLOWER_SIMPLE(key->code.codepoint);
 
   return 1;
 }
 
-#if FREE_MEMORY
-void unload_terminfo() {
-  del_curterm(cur_term);
-  free(normal_lookup);
-  free(shift_lookup);
+static char __inline get_byte_for_mod(int modifiers) {
+  /*  For KEYSYM and Function-keys
+   *    base        = 49
+   *    Shift       =  1
+   *    Alt         =  2
+   *    Cntrl       =  4  */
+
+  return 49
+    + (1 * (!! (modifiers & TERMKEY_KEYMOD_SHIFT)))
+    + (2 * (!! (modifiers & TERMKEY_KEYMOD_ALT)))
+    + (4 * (!! (modifiers & TERMKEY_KEYMOD_CTRL)));
 }
-#endif
-
-#if 0
-TermKeyKey* parse_key_new(const char *def) {
-  TermKeyKey *key = malloc(sizeof(*key));
-
-  if (! parse_key(def, key))
-    return free(key), NULL;
-
-  return key;
-}
-#endif
-
-int parse_key(const char *def, TermKeyKey *key) {
-  const char *last_char;
-
-  // Try default
-  last_char = termkey_strpkey(tk, def, key, 0);
-  if (last_char != NULL && *last_char == 0)
-    return 1;
-
-  // Try A-k instead of M-k
-  last_char = termkey_strpkey(tk, def, key, TERMKEY_FORMAT_ALTISMETA);
-  if (last_char != NULL && *last_char == 0)
-    return 1;
-
-  // Try Meta-k, Alt-k instead of M-k, A-k
-  last_char = termkey_strpkey(tk, def, key, TERMKEY_FORMAT_ALTISMETA|TERMKEY_FORMAT_LONGMOD);
-  if (last_char != NULL && *last_char == 0)
-    return 1;
-
-  // Try Shift-k, Control-k instead of S-k, C-k
-  last_char = termkey_strpkey(tk, def, key, TERMKEY_FORMAT_LONGMOD);
-  if (last_char != NULL && *last_char == 0)
-    return 1;
-
-  // Try ^K
-  last_char = termkey_strpkey(tk, def, key, TERMKEY_FORMAT_CARETCTRL);
-  if (last_char != NULL && *last_char == 0)
-    return 1;
-
-  // Try ^k (lower char)
-  if (def[0] == '^' && def[1] >= 'a' && def[1] <= 'z' && def[2] == 0) {
-    char def2[3] = { '^', 0, 0 };
-    def2[1] = toupper(def[1]);
-    last_char = termkey_strpkey(tk, def2, key, TERMKEY_FORMAT_CARETCTRL);
-    if (last_char != NULL && *last_char == 0)
-      return 1;
-  }
-
-  return error_write("%s: %s", E_INVALID_KEY, def), 0;
-}
-
-#if DEBUG
-const char *format_key(TermKeyKey *key) {
-  static char buf[32];
-  termkey_strfkey(tk, buf, sizeof(buf), key, 0);
-  return buf;
-}
-#endif
-
-static inline __attribute__((always_inline))
-  char get_byte_for_mod(int modifiers) {
-    /*  For KEYSYM and Fn-keys
-     *    base        = 49
-     *    Shift       =  1
-     *    Alt         =  2
-     *    Cntrl       =  4  */
-
-    return 49
-      + (1 * (!! (modifiers & TERMKEY_KEYMOD_SHIFT)))
-      + (2 * (!! (modifiers & TERMKEY_KEYMOD_ALT)))
-      + (4 * (!! (modifiers & TERMKEY_KEYMOD_CTRL)));
-  }
 
 const char *get_key_code(TermKeyKey *key) {
   static char buf[8];
@@ -360,5 +394,30 @@ const char *get_key_code(TermKeyKey *key) {
     }
   }
 
+  error_set_errno(E_KEYCODE_NA);
   return NULL;
 }
+
+#if DEBUG
+const char *format_key(TermKeyKey *key) {
+  static char buf[32];
+  termkey_strfkey(tk, buf, sizeof(buf), key, 0);
+  return buf;
+}
+#endif
+
+#if FREE_MEMORY
+void unload_terminfo() {
+  ___("unload_terminfo");
+
+  while (normal_lookup_size--)
+    free(normal_lookup[normal_lookup_size].sequence);
+
+  while (shift_lookup_size--)
+    free(shift_lookup[shift_lookup_size].sequence);
+
+  free(normal_lookup);
+  free(shift_lookup);
+}
+#endif
+

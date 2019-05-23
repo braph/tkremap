@@ -1,4 +1,3 @@
-#include "tkremap.h"
 #include "options.h"
 #include "errormsg.h"
 
@@ -16,16 +15,18 @@ int parse_options(int argc, char *args[], const char *optstr, option **opts) {
   *opts = NULL;
 
   for (i = 0; i < argc; ++i) {
-    if (args[i][0] != '-')    // is argument
+    if (args[i][0] != '-')      // is argument
       goto RETURN;
-    if (args[i][1] == 0)      // argument "-"
+    if (args[i][1] == '\0')     // argument "-"
       goto RETURN;
     if (args[i][1] == '-') { 
-      if (args[i][2] == '0')  // end of options "--"
+      if (args[i][2] == '\0') { // end of options "--"
+        ++i;
         goto RETURN;
+      }
       else {
         // treat --long-options as unknown option
-        error_write("%s: %s", E_UNKNOWN_OPT, args[i]);
+        error_set(E_UNKNOWN_OPT, args[i]);
         goto ERROR;
       }
     }
@@ -33,7 +34,8 @@ int parse_options(int argc, char *args[], const char *optstr, option **opts) {
     c = &args[i][1];
     do {
       if (! (oc = strchr(optstr, *c))) {
-        error_write("%s: %c\n", E_UNKNOWN_OPT, *c);
+        char _opt[3] = { '-', *c, '\0' };
+        error_set(E_UNKNOWN_OPT, _opt);
         goto ERROR;
       }
 
@@ -41,16 +43,17 @@ int parse_options(int argc, char *args[], const char *optstr, option **opts) {
       (*opts)[opti].opt = *c;
 
       if (*(oc+1) == ':') {  // needs argument
-        if (*(c+1) != 0) {  // arg is in "-oARG"
+        if (*(c+1) != 0) {   // arg is in "-oARG"
           (*opts)[opti].arg = (c+1);
           break;
         }
-        if (++i < argc) {   // arg is "-o ARG"
+        if (++i < argc) {    // arg is "-o ARG"
           (*opts)[opti].arg = args[i];
           break;
         }
         else {
-          error_write("%s: %c\n", E_MISSING_ARG, *c);
+          char _opt[3] = { '-', *c, '\0' };
+          error_set(E_MISSING_ARG, _opt);
           goto ERROR;
         }
       }
@@ -66,12 +69,15 @@ RETURN:
   return i;
 
 ERROR:
-  free(opts);
+  free(*opts);
+  *opts = NULL;
   return -1;
 }
 
-/*
- * Parse options, modify argc and argv, return 1 on success, 0 on failure
+/* Parse options.
+ *
+ * On success: Modify `argc` and `argv` and return 1.
+ * On failure: Do not modify `argc`, `argv`, return 0.
  */
 int get_options(int *argc, char **args[], const char *optstr, option **opts) {
   int optind = parse_options(*argc, *args, optstr, opts);

@@ -3,44 +3,60 @@
 
 #include <stdio.h>
 
-#define LEX_TOKEN_DOUBLE_QUOTE           10
-#define LEX_ERROR_MISSING_DOUBLE_QUOTE  -10
+#define LEX_ERROR_MISSING_DOUBLE_QUOTE  -2
+#define LEX_ERROR_MISSING_SINGLE_QUOTE  -3
+#define LEX_ERROR_UNEXPECTED_SYMBOL     -4
 
-#define LEX_TOKEN_SINGLE_QUOTE           11
-#define LEX_ERROR_MISSING_SINGLE_QUOTE  -11
+#define LEX_TOKEN_DOUBLE_QUOTE           4 // 2
+#define LEX_TOKEN_SINGLE_QUOTE           4 // 3
+#define LEX_TOKEN_WORD                   4
+#define LEX_TOKEN_SEMICOLON              5
+#define LEX_TOKEN_AND                    6
+#define LEX_TOKEN_OR                     7
+#define LEX_TOKEN_BLOCK_BEG              8
+#define LEX_TOKEN_BLOCK_END              9
+#define LEX_TOKEN_NEW_LINE               10
 
-#define LEX_TOKEN_WORD                   12
-#define LEX_TOKEN_END                    13
+#define LEX_TOK2STR(TOK) \
+  ( TOK == EOF ? "EOF" : \
+  ( TOK == LEX_TOKEN_WORD ? "LEX_TOKEN_WORD" : \
+  ( TOK == LEX_TOKEN_SEMICOLON ? "LEX_TOKEN_SEMICOLON" : \
+  ( TOK == LEX_TOKEN_AND ? "LEX_TOKEN_AND" : \
+  ( TOK == LEX_TOKEN_OR ? "LEX_TOKEN_OR" : \
+  ( TOK == LEX_TOKEN_BLOCK_BEG ? "LEX_TOKEN_BLOCK_BEG" : \
+  ( TOK == LEX_TOKEN_BLOCK_END ? "LEX_TOKEN_BLOCK_END" : \
+  ( TOK == LEX_TOKEN_NEW_LINE ? "LEX_TOKEN_NEW_LINE" : \
+    "UNKNOWN" ))))))))
 
 typedef struct lexer_t {
   FILE      *in;
-  int        is_eof;
-  int        line;
-  int        line_pos;
+  int        line_no;
+  int        unlexed;
 
   char      *token_buf;
   int        token_bufsz;
   int        token_pos;
+  int        token_type;
 
-  #define    LEX_BUF_SZ 8
-  char       buf[LEX_BUF_SZ];
-  int        buf_pos;
+  char      *c;
+  char      *buf;
+  size_t     bufsz;
 
-  #define    LEX_ERROR_BUF_SZ 1024
   int        error_num;
-  char       error_buf[LEX_ERROR_BUF_SZ];
 } lexer_t;
 
-extern  lexer_t       *_current_lex;
-#define lex_line      (_current_lex->line)
-#define lex_line_pos  (_current_lex->line_pos)
-#define lex_error_num (_current_lex->error_num)
+extern  lexer_t  *_current_lex;
 
 int   lex_init(FILE *);
 void  lex_destroy();
 int   lex_lex();
+void  lex_unlex();
 int   lex_eof();
-char* lex_token();
+char* lex_line();
+int   lex_line_no();
+int   lex_char_pos();
+int   lex_errorno();
 char* lex_error();
+char* lex_token();
 
 #endif

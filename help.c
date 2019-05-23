@@ -8,175 +8,166 @@
 #include <string.h>
 
 #if README
-#define BOLD        "**"
-#define BOLD_END    "**"
-#define ITALIC      "_"
-#define ITALIC_END  "_"
+ #define BOLD        "**"
+ #define BOLD_END    "**"
+ #define ITALIC      "_"
+ #define ITALIC_END  "_"
 #else
-#define README 0
-#ifndef BOLD
-#define BOLD        "\033[1m"
-#endif
-#ifndef BOLD_END
-#define BOLD_END    "\033[0m"
-#endif
-#ifndef ITALIC
-#define ITALIC      "\033[4m"
-#endif
-#ifndef ITALIC_END
-#define ITALIC_END  "\033[0m"
-#endif
+ #define README 0
+ #ifndef BOLD
+ #define BOLD        "\033[1m"
+ #endif
+ #ifndef BOLD_END
+ #define BOLD_END    "\033[0m"
+ #endif
+ #ifndef ITALIC
+ #define ITALIC      "\033[4m"
+ #endif
+ #ifndef ITALIC_END
+ #define ITALIC_END  "\033[0m"
+ #endif
 #endif // README
+static const char *attrs[] = { BOLD, BOLD_END, ITALIC, ITALIC_END };
 
-#if README
-const char * const EXAMPLES = 
-  "Reindent a buch of *.c files:\n"
-  " tkremap -c 'bind Enter write \"set shiftwidth=2\n set tabstop=2\n gg=G:wg\n\"  vim *.c"
-  //"readline -P exec -p 'sh '"
+#define PC(C) \
+  printf("%c", C)
 
-  "Configuration format:\n"
-  " Configuration lines end with a newline or a semicolon (;).\n"
-  " A line can be continued using the line continuation character (\\).\n"
-  " Multiple commands can be specified using \\; or &&\n";
-#endif
-
-#define P(STR) \
-  fputs(STR, stdout);
-
-#define PF(...) \
-  printf(__VA_ARGS__)
+#define PA(STR) \
+  printf("%s", fill_attrs(STR))
 
 #define PFA(FMT, ...) \
   printf(fill_attrs(FMT), ##__VA_ARGS__)
 
-#define PA(STR) \
-  fputs(fill_attrs(STR), stdout)
+#define sprintf(BUF, ...) \
+  snprintf(BUF, 0xFFFF, __VA_ARGS__)
 
-#define ATTRS(...) \
-  fill_attrs(__VA_ARGS__)
+#define GET_CMD_DESCRIPTION(CMD_NAME) \
+  (CMD_NAME + strlen(CMD_NAME) + 1)
 
-static char* firstline(const char *s) {
-  return strndup(s, strcspn(s, "\n"));
+static void __inline pad_right(int n) {
+  printf("%*s", n, "");
+  //while (n--) PC(' ');
 }
 
-static int has_more_lines(const char *s) {
-  return !!strchr(s, '\n');
-}
-
-static const char* more_lines(const char *s) {
-  return s += strcspn(s, "\n");
-}
-
-static void pad_right(int n) {
-  while (n--)
-    putchar(' ');
-}
-
-static const char *attrs[] = {
-  BOLD,
-  BOLD_END,
-  ITALIC,
-  ITALIC_END
-};
-
-static void  help_keys();
-static void  help_command(command_t *cmd, int full);
-static void  help_commands(int full);
-static void  print_all(const char *prog, const char *usage);
-
-static char* fill_attrs(const char *);
+static char* firstline(const char *, const char **);
 static char* indent(const char *, int);
+static char* fill_attrs(const char *);
+static void  help_command(const command_t *cmd, int full);
 
+#define HELP_USAGE          0x01
+#define HELP_COMMANDS_SHORT 0x02
+#define HELP_COMMANDS_FULL  0x04
+#define HELP_KEYS           0x08
 int help(const char *prog, const char *usage, const char *topic) {
-  command_t *cmd = 0;
+  int flags = 0;
+  const command_t *cmd = (command_t*) -1;
 
-  if (! topic)
-    PFA(usage, prog);
-  else if (streq(topic, "all"))
-    print_all(prog, usage);
-  else if (streq(topic, "keys"))
-    help_keys();
-  else if (streq("commands", topic))
-    help_commands(0);
-  else {
-    if ((cmd = get_command(topic)))
-      help_command(cmd, 1);
-    else {
-      PFA(usage, prog);
-      PF("%s: %s\n", E_UNKNOWN_CMD, topic);
-    }
+  if      (topic == NULL)            flags = HELP_USAGE;
+  else if (streq(topic, "all"))      flags = HELP_USAGE|HELP_COMMANDS_FULL|HELP_KEYS;
+  else if (streq(topic, "keys"))     flags = HELP_KEYS;
+  else if (streq(topic, "commands")) flags = HELP_COMMANDS_SHORT;
+  else if ((cmd = get_command(topic))) {
+    PC('\n');
+    help_command(cmd, 1);
+  } else {
+    flags = HELP_USAGE;
   }
+
+  if (flags & HELP_USAGE)
+    PFA(usage, prog);
+
+  if (cmd == 0) {
+    error_add(topic);
+    printf("%s\n", error_get());
+  }
+
+  if (flags & HELP_COMMANDS_SHORT || flags & HELP_COMMANDS_FULL) {
+    PA("_Commands_\n\n");
+    for (int i = COMMANDS_SIZE; i--;)
+      help_command(commands[i], flags & HELP_COMMANDS_FULL);
+    PC('\n');
+  }
+
+  if (flags & HELP_KEYS) PA(
+    "_Keys_\n\n"
+    " *Symbolic keys*\n"
+    "  Up/Down/Left/Right, PageUp/PageDown, Home/End, Insert/Delete,\n"
+    "  Escape, Space, Enter, Tab, Backspace, F1 .. F12\n\n"
+    " *Modifiers*\n"
+    "  *Control*: Ctrl-key, C-key, ^key\n"
+    "  *Alt*:     Alt-key, A-key, Meta-key, M-key\n"
+    "  *Shift*:   Shift-key, S-key\n\n"
+  );
 
   return 0;
 }
 
-static void print_all(const char *prog, const char *usage) {
-  PFA(usage, prog);
-  help_commands(1);
-  help_keys();
-}
-
-static void help_commands(int full) {
-  PA("_Commands_\n\n");
-  for (int i = commands_size; i--; )
-    help_command(commands[i], full);
-  P("\n");
-}
-
 // Returns [-fb] [-a arg] [-s arg]
-static char* get_option_string(command_t *cmd ) {
-  char opts[128],  *o = opts;
+static char* __inline get_option_string(const command_t *cmd ) {
+  char ret[1024]      = { '\0' };
+  char opts[128]      = { '\0' };
   char flags[128], *f = flags;
-  char *r = calloc(1, 1024);
 
   if (cmd->opts) {
-    for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt)
-      if (opt->meta)
-        o += sprintf(o, " [-%c %s]", opt->opt, opt->meta);
+    for (command_opt_t *opt = cmd->opts; opt->opt; ++opt)
+      if (opt->meta) {
+        char buf[64];
+        sprintf(buf, " [-%c %s]", opt->opt, opt->meta);
+        strcat(opts, buf);
+      }
       else
         *f++ = opt->opt;
-    *f = *o = 0;
+    *f = '\0';
 
     if (strlen(flags))
-      sprintf(r, "[-%s]", flags);
+      sprintf(ret, "[-%s]", flags);
     if (strlen(opts))
-      strcat(r, opts + !strlen(flags));
+      strcat(ret, opts + !strlen(flags) /*Trim leading space*/);
   }
 
-  return r;
+  return strdup(ret);
 }
 
-static void help_command(command_t *cmd, int full) {
+// Returns ARGUMENT [OPTIONAL...]
+static char* __inline get_argument_string(const command_t *cmd) {
+  char ret[1024] = { '\0' };
+
+  if (cmd->args) {
+    for (const char *arg = cmd->args; *arg; arg += (1+strlen(arg))) {
+      char buf[64];
+      if      (*arg == '+') sprintf(buf, " _%s_...",   arg + 1);
+      else if (*arg == '*') sprintf(buf, " [_%s_...]", arg + 1);
+      else                  sprintf(buf, " _%s_",      arg);
+      strcat(ret, buf);
+    }
+  }
+
+  return strdup(ret);
+}
+
+static void help_command(const command_t *cmd, int full) {
   if (! full) {
     PFA("*%-15s*", cmd->name);
-    PA(firstline(cmd->desc));
-    P("\n");
+    PA(firstline(GET_CMD_DESCRIPTION(cmd->name), 0));
+    PC('\n');
     return;
   }
 
   PFA("*%s*", cmd->name);
 
   if (cmd->opts) {
-    P(" ");
+    PC(' ');
     PA(get_option_string(cmd));
   }
 
-  if (cmd->args) {
-    for (const char **arg = cmd->args; *arg; ++arg)
-      if (**arg == '+')
-         PFA(" _%s_...",    *arg + 1);
-      else if (**arg == '*')
-         PFA(" [_%s_...]",  *arg + 1);
-      else
-         PFA(" _%s_",       *arg);
-  }
+  PA(get_argument_string(cmd));
 
-  P("\n");
-  P(indent(ATTRS(cmd->desc), 1));
-  P("\n");
+  PC('\n');
+  PA(indent(GET_CMD_DESCRIPTION(cmd->name), 1));
+  PC('\n');
 
   if (cmd->opts) {
-    P("\n");
+    PC('\n');
 
     int max = 0;
     for (const command_opt_t *opt = cmd->opts; opt->opt; ++opt)
@@ -193,92 +184,68 @@ static void help_command(command_t *cmd, int full) {
       else
         pad_right(3 + max);
 
-      PA(firstline(opt->desc));
-      if (has_more_lines(opt->desc))
-        PA(indent(more_lines(opt->desc), 6 + max));
-      P("\n");
+      const char *more_lines = 0;
+      PA(firstline(opt->desc, &more_lines));
+      if (more_lines)
+        PA(indent(more_lines, 6 + max));
+      PC('\n');
     }
   }
 
-  P("\n");
+  PC('\n');
 }
 
-static
-char * indent(const char *str, int pad) {
-  int   ind = -1;
-  char *res = calloc(1, strlen(str) + 1024);
+// Indent a block of lines
+static char* indent(const char *str, int pad) {
+  int  ind = -1;
+  char res[8192];
 
-  for (int i = pad; i--; )
-    res[++ind] =  ' ';
+  goto INDENT; // First indent does not depend on newline
 
   do {
     res[++ind] = *str;
-    if (*str == '\n')
-      for (int i = pad; i--; )
+    if (*str++ == '\n')
+INDENT:
+      for (int i = pad; i--;)
         res[++ind] = ' ';
-  } while (*++str);
+  } while (*str);
 
-  return res;
+  res[++ind] = '\0';
+  return strdup(res);
 }
 
-// Replace pseudo markdown (*_) with attributes
+// Replace pseudo markdown ("*", "_") with replacements
 static char* fill_attrs(const char *s) {
-  int state = 1;
-  char *r = calloc(1, strlen(s) + 1024);
+  char res[8192] = { '\0' };
+  int  state = 1;
+  int  ind = 0;
 
   do {
     switch (*s) {
-      case '*': // index = 42 % 2
-      case '_': // index = 95 % 2
-        if (README || isatty(1))
-          strcat(r, attrs[(2*(*s%2)) + (state = !state)]);
-        break;
-      case '\\':  strncat(r, ++s, 1);
+      case '*':   // index = 42 % 2 == 0
+      case '_':   // index = 95 % 2 == 1
+                  if (README || isatty(STDOUT_FILENO)) {
+                    strcat(res, attrs[(2*(*s%2)) + (state = !state)]);
+                    ind = strlen(res);
+                  }
                   break;
-      default:    strncat(r, s, 1);
+      case '\\':  ++s; // fall-through
+      default:    res[ind] = *s;
+                  res[++ind] = '\0';
     }
-  } while (*++s);
+  } while (*s && *++s);
 
-  return r;
+  return strdup(res);
 }
 
-#include <time.h>
-static void help_keys() {
-  PA(
-      "_Keys_\n\n"
-      " *Symbolic keys*\n"
-      "  Up/Down/Left/Right, PageUp/PageDown, Home/End, Insert/Delete,\n"
-      "  Escape, Space, Enter, Tab, Backspace, F1 .. F12\n"
-      "\n"
-      " *Modifiers*\n"
-      "  *Control*: Ctrl-key, C-key, ^key\n"
-      "  *Alt*:     Alt-key, A-key, Meta-key, M-key\n"
-      "  *Shift*:   Shift-key, S-key\n"
-      "\n"
-    );
-
-  char buf[99];
-  TermKeyKey key;
-  srand(time(NULL));
-  int t, c, m, f;
-  for (int i = 0; i < 20; ++i) {
-    t = rand(), c = rand(), m = rand(), f = rand();
-
-    #define case break; case
-    switch ((int) (key.type = (t % 3))) {
-      case TERMKEY_TYPE_UNICODE:
-        key.code.codepoint = (c % 'Z') + 'a';
-      case TERMKEY_TYPE_KEYSYM:
-        key.code.sym       = (c % TERMKEY_SYM_END) + 1;
-      case TERMKEY_TYPE_FUNCTION:
-        key.code.number    = (c % 12) + 1;
-    }
-    #undef case
-
-    key.modifiers = (m & TERMKEY_KEYMOD_ALT) | (m & TERMKEY_KEYMOD_CTRL) | (m & TERMKEY_KEYMOD_SHIFT);
-    f = (f & TERMKEY_FORMAT_LONGMOD) | (f & TERMKEY_FORMAT_CARETCTRL) | (f & TERMKEY_FORMAT_ALTISMETA);
-    termkey_strfkey(tk, buf, 99, &key, f);
-    PFA(" *%s*,", buf);
-  }
+static char* firstline(const char *s, const char **other_lines) {
+  char firstline[1024];
+  char *f = firstline;
+  while (*s && *s != '\n')
+    *f++ = *s++;
+  *f = '\0';
+  if (other_lines && *s)
+    *other_lines = s + 1;
+  return strdup(firstline);
 }
 

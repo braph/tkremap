@@ -59,9 +59,20 @@ COMMAND_CALL_FUNC(cmd_alias_call) {
 const command_t command_alias = {
   .name  = "alias",
   .desc  = "Create a command alias",
-  .args  = (const char*[]) { "NAME", "COMMAND", "DESCRIPTION", 0 },
+  .args  = ARGUMENTS("NAME", "COMMAND", "DESCRIPTION"),
   .parse = &copyargs,
   .call  = &cmd_alias_call,
   .free  = &deleteargs
 };
+
+  /* TODO: enable aliases in commands.c:
+  // Resolve alias first
+  char **aliased_argv = alias_resolve(name, &argc, args);
+  if (aliased_argv) {
+    command_call_t* ret = command_parse(argc, aliased_argv, store);
+    error_add(name); // we want to know the aliased named
+    freeArray(aliased_argv, argc);
+    return ret;
+  }
+  */
 

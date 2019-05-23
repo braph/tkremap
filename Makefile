@@ -1,11 +1,11 @@
-PROGNAME     = tkremap
-LIBS 		     = -lutil -ltermkey -lcurses -lpthread -lreadline
-PREFIX       = /usr
-STRIP        = strip
-CFLAGS      += -Wall
+PROGNAME = tkremap
+LIBS 		 = -lutil -ltermkey -lcurses -lreadline
+PREFIX   = /usr
+STRIP    = strip
+override CFLAGS += -Wall -z muldef
 
 ifeq ($(DEBUG), 1)
-	CFLAGS 		+= -g -DFREE_MEMORY=1 -DDEBUG=1
+	CFLAGS 		+= -O0 -g -DFREE_MEMORY=1 -DDEBUG=1
 	STRIP      = true
 else
 	CFLAGS 		+= -O3
@@ -19,13 +19,22 @@ ifeq ($(README), 1)
 	CFLAGS 		+= -DREADME
 endif
 
-CMDS = bind exec unbind unbound core key load readline signal write
-CMDS := $(addprefix cmd_, $(CMDS))
+COMMANDS = bind exec group unbind unbound core key load readline redraw_method signal suspend write
+COMMANDS_BAS := $(addprefix cmd_, $(COMMANDS))
+COMMANDS_SRC := $(addsuffix .c, $(COMMANDS_BAS))
+COMMANDS_OBJ := $(addsuffix .o, $(COMMANDS_BAS))
 
-OBJS  = $(CMDS) aliases termkeystuff tkremap conf common lexer options commands help errormsg
-OBJS := $(addsuffix .o, $(OBJS))
+OBJS = aliases termkeystuff tkremap conf common lexer options commands help errormsg
+OBJS_SRC := $(addsuffix .c, $(OBJS))
+OBJS_OBJ := $(addsuffix .o, $(OBJS))
 
-build: $(OBJS)
+#COMMAND_STRUCTS = $(shell sed -n -r 's/command_t (command_[a-z]+).*/\1/p' $(COMMANDS_SRC) | sort)
+
+build:
+	$(CC) $(CFLAGS) $(LIBS) $(OBJS_SRC) $(COMMANDS_SRC) main.c -o $(PROGNAME)
+	$(STRIP) $(PROGNAME)
+
+build2: $(COMMANDS_OBJ) $(OBJS_OBJ)
 	$(CC) $(CFLAGS) $(LIBS) objs/*.o main.c -o $(PROGNAME)
 	$(STRIP) $(PROGNAME)
 

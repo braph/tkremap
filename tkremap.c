@@ -12,23 +12,13 @@
 
 #define SET_CURSOR_Y_X "\033[%d;%dH"
 #define REQUEST_CURSOR "\033[6n"
+#define GLOBAL         "global"
+#define DEFAULT        "default"
 
 struct context_t context;
 
 void writeb_to_program(const char *s, ssize_t len) {
-  ssize_t n;
-
-  for (int i = 5; i--; ) {
-    n = write(context.program_fd, s, len);
-    if (n >= 0) {
-      s += n;
-      len -= n;
-      if (len == 0)
-        break;
-    } else if (n == -1 && errno != EAGAIN)
-      break;
-    usleep(100);
-  }
+  write_full(context.program_fd, s, len);
 }
 
 void writes_to_program(const char *s) {
@@ -36,67 +26,68 @@ void writes_to_program(const char *s) {
 }
 
 void context_init() {
-  keymode_init(&context.global_mode,  "global");
-  keymode_init(&context.default_mode, "default");
+  context.global_mode.name  = GLOBAL;
+  context.default_mode.name = DEFAULT;
+  context.global_mode.root  = calloc(1, BINDING_T_ROOT_NODE_SIZE);
+  context.default_mode.root = calloc(1, BINDING_T_ROOT_NODE_SIZE);
+
   context.current_mode = &context.default_mode;
-  for (int i = MODESTACK_SIZE; i--; )
+  for (int i = MODESTACK_SIZE; i--;)
     context.modestack[i] = &context.default_mode;
 }
 
 #if FREE_MEMORY
 void context_free() {
+  // We cannot free constant strings
+  context.global_mode.name  = NULL;
+  context.default_mode.name = NULL;
   keymode_free(&context.global_mode);
   keymode_free(&context.default_mode);
 
-  for (int i = context.n_keymodes; i--; )
-    keymode_free(context.keymodes[i]),
-      free(context.keymodes[i]);
+  for (int i = context.keymodes_size; i--;) {
+    keymode_free(context.keymodes[i]);
+    free(context.keymodes[i]);
+  }
 
   free(context.keymodes);
 }
 #endif
 
-
-void keymode_init(keymode_t *km, const char *name) {
-  km->name = strdup(name);
-  km->root = calloc(1, sizeof(binding_t));
-}
-
 keymode_t* get_keymode(const char *name) {
-  if (streq(name, "global"))
+  if (streq(name, GLOBAL))
     return &context.global_mode;
 
-  if (streq(name, "default"))
+  if (streq(name, DEFAULT))
     return &context.default_mode;
 
-  for (int i = context.n_keymodes; i--;)
+  for (int i = context.keymodes_size; i--;)
     if (streq(name, context.keymodes[i]->name))
       return context.keymodes[i];
 
+  error_set_errno(E_UNKNOWN_MODE);
   return NULL;
 }
 
 keymode_t* add_keymode(const char *name) {
   keymode_t *km = calloc(1, sizeof(*km));
-  keymode_init(km, name);
+  km->name = strdup(name);
+  km->root = calloc(1, BINDING_T_ROOT_NODE_SIZE);
 
-  context.n_keymodes++;
-  context.keymodes = realloc(context.keymodes, context.n_keymodes * sizeof(km));
-  context.keymodes[context.n_keymodes - 1] = km;
+  context.keymodes_size++;
+  context.keymodes = realloc(context.keymodes, context.keymodes_size * sizeof(km));
+  context.keymodes[context.keymodes_size - 1] = km;
   return km;
 }
 
-binding_t*
-binding_get_binding(binding_t *binding, TermKeyKey *key) {
-  for (int i = binding->size; i--; )
+binding_t* binding_get_binding(binding_t *binding, TermKeyKey *key) {
+  for (int i = binding->size; i--;)
     if (! termkey_keycmp(tk, key, &binding->bindings[i]->key))
       return binding->bindings[i];
 
   return NULL;
 }
 
-binding_t*
-binding_add_binding(binding_t *binding, binding_t *next_binding) {
+binding_t* binding_add_binding(binding_t *binding, binding_t *next_binding) {
   binding->size++;
   binding->bindings = realloc(binding->bindings, binding->size * sizeof(binding_t*));
   return (binding->bindings[binding->size - 1] = next_binding);
@@ -105,84 +96,57 @@ binding_add_binding(binding_t *binding, binding_t *next_binding) {
 #if FREE_MEMORY
 void keymode_free(keymode_t *km) {
   for (int i = 0; i < 4; ++i)
-    if (km->unbound[i] != NULL)
-      commands_free(km->unbound[i]),
-        free(km->unbound[i]);
+    if (km->unbound[i] != NULL && PTR_UNREF(km->unbound[i])) {
+      command_call_free(km->unbound[i]);
+      free(km->unbound[i]);
+    }
 
   binding_free(km->root);
   free(km->name);
 }
 #endif
 
-
-void command_call_free(command_call_t *call) {
-  if (call->command->free != NULL) {
-    call->command->free(call->arg);
-  }
-}
-
-void commands_free(commands_t *commands) {
-  for (int i = 0; i < commands->size; ++i) {
-    command_call_free(&commands->commands[i]);
-    ++i; // uneven index means command separator (';', '&&')
-  }
-  free(commands->commands);
-}
-
 // completely destroy a binding, including sub bindings
 void binding_free(binding_t *binding) {
-  if (binding->commands != NULL) {
-    commands_free(binding->commands);
-    free(binding->commands);
-    binding->commands = NULL;
+  if (binding->command != NULL && PTR_UNREF(binding->command)) {
+    command_call_free(binding->command);
+    free(binding->command);
   }
 
-  for (int i = binding->size; i--; ) {
+  for (int i = binding->size; i--;) {
     binding_free(binding->bindings[i]);
   }
+
   free(binding->bindings);
   free(binding);
 }
 
-int command_execute(command_call_t *cmd, TermKeyKey *key) {
-  return cmd->command->call(cmd, key);
+void command_call_free(command_call_t *call) {
+  if (call->command->free != NULL)
+    call->command->free(call->arg);
 }
 
-void commands_execute(commands_t *commands, TermKeyKey *key) {
-  int last_return;
-
-  for (int i=0; i < commands->size; ++i) {
-    assert(! (i % 2));
-    last_return = command_execute(&commands->commands[i], key);
-
-    // stop execution if command separators is && and command failed
-check_command_separator:
-    if (++i < commands->size) {
-      if (commands->commands[i].command == (command_t*) (uintptr_t) COMMAND_SEPARATOR_AND && !last_return) {
-        ++i; // "next command"
-        goto check_command_separator;
-      }
-    }
-  }
+int command_call_execute(command_call_t *call, TermKeyKey *key) {
+  return call->command->call(call, key);
 }
 
 static
-void commands_execute_with_repeat(commands_t *commands, keymode_t *km, TermKeyKey *key) {
+void command_call_execute_with_repeat(command_call_t *call, keymode_t *km, TermKeyKey *key) {
   if (km->repeat_enabled && context.repeat) {
-    for (int r = context.repeat; r--; )
-      commands_execute(commands, key);
+    for (int r = context.repeat; r--;)
+      command_call_execute(call, key);
     context.repeat = 0;
   }
   else
-    commands_execute(commands, key);
+    command_call_execute(call, key);
 }
 
 static
 void binding_execute(binding_t *binding, keymode_t *km, TermKeyKey *key) {
   //debug("binding_execute(..., %s, %s)", km->name, format_key(&binding->key));
-  if (binding->commands != NULL) {
-    //debug("executing commands");
-    commands_execute_with_repeat(binding->commands, km, key);
+  if (binding->command != NULL) {
+    //debug("executing command");
+    command_call_execute_with_repeat(binding->command, km, key);
   }
 
   if (binding->size > 0) {
@@ -195,55 +159,27 @@ void binding_execute(binding_t *binding, keymode_t *km, TermKeyKey *key) {
   }
 }
 
-int check_args(int argc, const char *args[]) {
-  for (const char **arg = args; *arg; ++arg) {
-    if (**arg == '+') {
+int check_args(int argc, const char *wanted_args) {
+  for (const char *arg = wanted_args; *arg; arg += (1+strlen(arg))) {
+    if (*arg == '+') {
       if (! argc)
-        return error_write("%s: %s", E_MISSING_ARG, (*arg+1)), 0;
+        return error_set(E_MISSING_ARG, (arg+1)), 0;
 
       break; // OK
     }
-    else if (**arg == '*') {
+    else if (*arg == '*') {
       break; // OK
     }
     else {
       if (! argc--)
-        return error_write("%s: %s", E_MISSING_ARG, *arg), 0;
+        return error_set(E_MISSING_ARG, arg), 0;
     }
   }
 
   return 1;
 }
 
-char* args_get_arg(int *argc, char ***argv, const char *name) {
-  if (! *argc)
-    return error_write("%s: %s", E_MISSING_ARG, name), NULL;
-
-  char *ret = (*argv)[0];
-  --(*argc), ++(*argv);
-  return ret;
-}
-
-void* copyargs(int argc, char *args[], option *options) {
-  command_args_t *cmdargs = malloc(sizeof(command_args_t));
-  cmdargs->argc = argc;
-  cmdargs->args = immutable_array(argc, args);
-  return cmdargs;
-}
-
-void unpackargs(int *argc, char ***args, option** options, command_args_t* cmdargs) {
-  if (argc)
-    *argc = cmdargs->argc;
-  *args = cmdargs->args;
-}
-
-void deleteargs(void *_args) {
-  command_args_t *args = (command_args_t*) _args;
-  free(args->args);
-  free(args);
-}
-
-void handle_key(TermKeyKey *key) {
+int handle_key(TermKeyKey *key) {
   debug("handle_key(%s)", format_key(key));
   binding_t *binding;
 
@@ -256,8 +192,10 @@ void handle_key(TermKeyKey *key) {
   // We're in a keybinding-chain =============================================
   if (context.current_binding != NULL) {
     //debug("context.current_binding->key = %s", format_key(&context.current_binding->key));
-    if ((binding = binding_get_binding(context.current_binding, key)))
+    if ((binding = binding_get_binding(context.current_binding, key))) {
       binding_execute(binding, context.current_mode, key);
+      return 1;
+    }
     else {
       //debug("no further binding found");
       context.current_binding = NULL;
@@ -267,10 +205,12 @@ void handle_key(TermKeyKey *key) {
         keytype = TERMKEY_TYPE_KEYSYM; // treat Ctrl/Alt as keysym
 
       if (context.current_mode->unbound[keytype])
-        commands_execute(context.current_mode->unbound[keytype], key);
+        command_call_execute(context.current_mode->unbound[keytype], key);
+
+      return 1;
     }
 
-    return;
+    return 0;
   }
 
   // Special case: If building command repetition, don't pass 0 as keybinding,
@@ -280,7 +220,7 @@ void handle_key(TermKeyKey *key) {
       key->type == TERMKEY_TYPE_UNICODE    &&
       key->code.codepoint == '0') {
     context.repeat *= 10;
-    return;
+    return 1;
   }
 
   // === Try current_mode then global_mode ===================================
@@ -288,10 +228,10 @@ void handle_key(TermKeyKey *key) {
     context.current_mode = &context.default_mode;   // never happen
 
   if ((binding = binding_get_binding(context.current_mode->root, key)))
-    return binding_execute(binding, context.current_mode, key);
+    return binding_execute(binding, context.current_mode, key), 1;
 
   if ((binding = binding_get_binding(context.global_mode.root, key)))
-    return binding_execute(binding, &context.global_mode, key);
+    return binding_execute(binding, &context.global_mode, key), 1;
   // =========================================================================
 
   // We have the chance to start a command repetition ========================
@@ -301,7 +241,7 @@ void handle_key(TermKeyKey *key) {
         key->code.codepoint <= '9')
     {
       context.repeat = context.repeat * 10 + (key->code.codepoint - '0');
-      return;
+      return 1;
     }
     else
       context.repeat = 0; // no
@@ -310,93 +250,38 @@ void handle_key(TermKeyKey *key) {
   // Handle unbound key ======================================================
   int keytype = key->type;
   if (keytype == TERMKEY_TYPE_UNICODE && key->modifiers)
-    keytype = TERMKEY_TYPE_KEYSYM; // treat Ctrl/Alt as keysym
+    keytype = TERMKEY_TYPE_KEYSYM; // treat Ctrl/Alt + [a-z..] as KEYSYM
 
-  if (context.current_mode->unbound[keytype])
-    return commands_execute(context.current_mode->unbound[keytype], key);
+  if (context.current_mode->unbound[keytype]) {
+    command_call_execute(context.current_mode->unbound[keytype], key);
+    return 1;
+  }
 
 WRITE_RAW:
-  write(context.program_fd, context.input_buffer, context.input_len);
-}
-
-  static
-void *redirect_to_stdout(void *_fd)
-{
-  #define  REDIRECT_BUFSZ 4096
-  int      fd = *((int*)_fd);
-  char     buffer[REDIRECT_BUFSZ];
-  char     *b;
-  ssize_t  bytes_read;
-  ssize_t  bytes_written;
-  struct   pollfd fds = { .fd = fd, .events = POLLIN };
-
-  for (;;) {
-    if (poll(&fds, 1, 100) > 0 && fds.revents & POLLIN ) {
-      if (context.stop_output)
-        return NULL;
-    }
-    else {
-      if (context.stop_output)
-        return NULL;
-      continue;
-    }
-
-    if ((bytes_read = read(fd, &buffer, REDIRECT_BUFSZ)) == -1) {
-      if (errno == EAGAIN) {
-        usleep(100);
-        continue;
-      }
-      else
-        return NULL;
-    }
-
-    b = buffer;
-    for (int i = 5; i--; ) {
-      bytes_written = write(STDOUT_FILENO, b, bytes_read);
-
-      if (bytes_written >= 0) {
-        b += bytes_written;
-        bytes_read -= bytes_written;
-        if (bytes_read == 0)
-          break;
-      }
-      else if (bytes_written == -1 && errno != EAGAIN)
-        break;
-
-      usleep(100);
-    }
-  }
-}
-
-int start_program_output() {
-  context.stop_output = 0;
-  if ((errno = pthread_create(&context.redir_thread,
-          NULL, redirect_to_stdout, (void*)&context.program_fd)))
-    return 0;
+  write_full(context.program_fd, context.input_buffer, context.input_len);
   return 1;
 }
 
-void stop_program_output() {
-  context.stop_output = 1;
-  pthread_join(context.redir_thread, NULL);
-}
-
 void get_cursor(int fd, int *y, int *x) {
-  fd = STDIN_FILENO; // TODO
   *x = *y = 0;
   struct termios tios, old_tios;
   char c;
+  char buf[3];
 
   if (tcgetattr(fd, &tios) == 0) {
     old_tios = tios;
-    cfmakeraw(&tios);
-    tcsetattr(fd, TCSANOW, &tios);
+    set_input_mode();                 // New Version
+    //cfmakeraw(&tios);               // Old Version 
+    //tcsetattr(fd, TCSANOW, &tios);  // ```````````
 
+    // Write request
     write(fd, REQUEST_CURSOR, sizeof(REQUEST_CURSOR)-1);
-    read(fd, &c, 1); // ESC
-    read(fd, &c, 1); // [
 
-    // Expect ^[[8;14R
+    // Expect something like ^[[8;14R
+    // -> 'ESC', '[', <N>, ';', <N>, 'R'
+    read(fd, &buf, 3);
+
+    *y = buf[2] - '0';
     while (read(fd, &c, 1) && c != ';')
       *y = (*y * 10) + c - '0';
 
@@ -408,10 +293,13 @@ void get_cursor(int fd, int *y, int *x) {
 }
 
 void set_cursor(int fd, int y, int x) {
-  dprintf(fd, SET_CURSOR_Y_X, y, x);
+  char buffer[16];  // dprintf(fd, SET_CURSOR_Y_X, y, x);
+  snprintf(buffer, sizeof(buffer), SET_CURSOR_Y_X, y, x);
+  write_full(fd, buffer, strlen(buffer));
 }
 
 void set_input_mode() {
+  // This function is like cfmakeraw()
   struct termios tios = context.tios_restore;
   tios.c_iflag    |= IGNBRK;
   tios.c_iflag    &= ~(IXON|INLCR|ICRNL);
@@ -426,34 +314,66 @@ int forkapp(char **argv, int *ptyfd, pid_t *pid) {
   struct winsize wsz;
   struct termios tios;
 
-  tcgetattr(STDIN_FILENO, &tios);
-  ioctl(STDIN_FILENO, TIOCGWINSZ, &wsz);
+  if (isatty(STDOUT_FILENO)) {
+    tcgetattr(STDOUT_FILENO, &tios);
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &wsz);
+    *pid = forkpty(ptyfd, NULL, &tios, &wsz);
+  }
+  else {
+    *pid = forkpty(ptyfd, NULL, NULL, NULL);
+  }
 
-  *pid = forkpty(ptyfd, NULL, &tios, &wsz);
-
-  if (*pid < 0)
-    return -1;
-  else if (*pid == 0)
-    return execvp(argv[0], &argv[0]);
+  if (*pid < 0) {
+    error_set_errno(errno);
+    return 0;
+  }
+  else if (*pid == 0) {
+    execvp(argv[0], &argv[0]);
+    error_set_errno(errno);
+    return 0;
+  }
 
   return 1;
 }
 
-void update_pty_size(int _) {
+void update_pty_size(int sig) {
   struct winsize ws;
   if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) != -1)
     ioctl(context.program_fd, TIOCSWINSZ, &ws);
 }
 
+void refresh_window() {
+  int fd = context.program_fd;
+  struct winsize wsz;
+
+  if (ioctl(fd, TIOCGWINSZ, &wsz) != -1) {
+    wsz.ws_col--, ioctl(fd, TIOCSWINSZ, &wsz);
+    kill(context.program_pid, SIGWINCH);
+    usleep(250);
+    wsz.ws_col++, ioctl(fd, TIOCSWINSZ, &wsz);
+    kill(context.program_pid, SIGWINCH);
+  }
+}
+
 const char *key_parse_get_code(const char *keydef) {
   TermKeyKey key;
-  const char *seq;
-
   if (! parse_key(keydef, &key))
     return 0;
 
-  if (! (seq = get_key_code(&key)))
-    error_write("%s: %s", E_KEYCODE_NA, keydef);
-
-  return seq; // is NULL if failed
+  return get_key_code(&key);
 }
+
+void redraw_begin() {
+  if (context.redraw_method == REDRAW_METHOD_SRMCUP)
+    SAVE_TERM_SCREEN(STDOUT_FILENO);
+}
+
+void redraw_redraw() {
+  if (context.redraw_method == REDRAW_METHOD_SRMCUP)
+    RESTORE_TERM_SCREEN(STDOUT_FILENO);
+  else if (context.redraw_method == REDRAW_METHOD_RESIZE)
+    refresh_window();
+  else
+    writes_to_program(context.redraw_method);
+}
+

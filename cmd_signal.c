@@ -3,9 +3,11 @@
 #include <string.h>
 #include <signal.h>
 
-static struct {
-  int   number;
-  char  *name;
+// $ kill -l | grep -Eo '[A-Z12]{3,}' |sort| sed -r 's/.*/{ SIG&,\t "&"\t }/g'
+
+static const struct __packed {
+  uint8_t number;
+  char    name[6];
 } signals[] = {
   { SIGINT,   "INT"   },
   { SIGHUP,   "HUP"   },
@@ -19,14 +21,16 @@ static struct {
   { SIGALRM,  "ALRM"  },
   { SIGWINCH, "WINCH" }
 };
-#define SIGNAL_SIZE (sizeof(signals)/sizeof(signals[0]))
+#define SIGNAL_SIZE (sizeof(signals) / sizeof(signals[0]))
 
-static
-int name2signal(const char *name) {
-  if (! strncasecmp(name, "SIG", 3))
+#define STRCASEQ_SIG(S) \
+  ((S[0]=='s'||S[0]=='S') && (S[1]=='i'||S[1]=='I') && (S[2]=='g'||S[2]=='G'))
+
+static int name2signal(const char *name) {
+  if (STRCASEQ_SIG(name))
     name += 3;
 
-  for (int i = SIGNAL_SIZE; i--; )
+  for (int i = SIGNAL_SIZE; i--;)
     if (! strcasecmp(name, signals[i].name))
       return signals[i].number;
 
@@ -34,8 +38,7 @@ int name2signal(const char *name) {
 }
 
 #if 0
-static
-char* signal2name(int number) {
+static char* signal2name(int number) {
   for (int i = 0; i < SIGNAL_SIZE; ++i)
     if (signals[i].number == number)
       return signals[i].name;
@@ -44,24 +47,26 @@ char* signal2name(int number) {
 }
 #endif
 
-static COMMAND_CALL_FUNC(call) {
-  int sig = (int) (uintptr_t) cmd->arg;
-  return !kill(context.program_pid, sig);
-}
-
 static COMMAND_PARSE_FUNC(parse) {
   #define number argc
 
-  if (! (number = name2signal(args[0])))
-    error_write("%s: %s", strerror(EINVAL), args[0]);
+  if ((number = atoi(args[0])) > 0)
+    return (void*) (uintptr_t) number;
 
-  return (void*) (uintptr_t) number; // is NULL if failed
+  if (! (number = name2signal(args[0])))
+    error_set(EINVAL, args[0]);
+
+  return (void*) (uintptr_t) number;
 }
 
-command_t command_signal = {
-  .name  = "signal",
-  .desc  = "Send signal to program",
-  .args  = (const char *[]) { "SIGNAL", 0 },
+static COMMAND_CALL_FUNC(call) {
+  return ! kill(context.program_pid, (int) (uintptr_t) cmd->arg);
+}
+
+const command_t command_signal = {
+  .name  = "signal"
+    "\0Send signal to program",
+  .args  = "SIGNAME|NUM\0",
   .parse = &parse,
-  .call  = &call,
+  .call  = &call
 };

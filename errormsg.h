@@ -1,16 +1,28 @@
 #ifndef _ERRORMSG_H
 #define _ERRORMSG_H
 
-extern const char *E_MISSING_ARG;
-extern const char *E_UNKNOWN_OPT;
-extern const char *E_UNKNOWN_CMD;
-extern const char *E_INVALID_KEY;
-extern const char *E_KEYCODE_NA;
-extern const char *E_AMBIGIOUS_CMD;
+#include <errno.h>
+
+enum ErrorConstants {
+  E_ERROR = 200,
+  E_MISSING_ARG,
+  E_UNKNOWN_OPT,
+  E_UNKNOWN_CMD,
+  E_UNKNOWN_MODE,
+  E_INVALID_KEY,
+  E_KEYCODE_NA,
+  E_AMBIGIOUS_CMD,
+  E_SYNTAX,
+  E_SPARE_ARGS
+};
 
 char* error_get();
-void  error_write(const char *fmt, ...);
-void  error_add(const char *fmt, ...);
+int   error_get_errno();
+void  error_set_errno(int);
+void  error_set(int, const char *cause);
+void  error_setf(int, const char *fmt, ...);
+void  error_add(const char *);
+void  error_addf(const char *, ...);
 void  error_free();
 
 #endif

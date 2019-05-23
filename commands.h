@@ -5,10 +5,9 @@
 #include <stdio.h>
 
 extern command_t* commands[];
-extern int        commands_size;
+#define COMMANDS_SIZE (18 + !!DEBUG) // DEBUG -> command_debug
 
-command_t*       get_command(const char *);
-command_call_t*  command_parse(int, char **, command_call_t*);
-commands_t*      commands_parse(int, char **);
+const command_t*  get_command(const char*);
+command_call_t*   command_parse(void*, command_call_t*);
 
 #endif
